@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Table(name = "attendances")
-public class Attendance {
+public class Attendance { //para el control de asistencia de los estudiantes
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
@@ -40,12 +40,12 @@ public class Attendance {
     private boolean isLate;
 
     @ManyToOne
-    @JoinColumn(name = "id_student", nullable = false)
-    private Student student;
+    @JoinColumn(name = "id_classroom", nullable = false)
+    private Classroom classroom;
 
     @ManyToOne
-    @JoinColumn(name = "id_subject", nullable = false)
-    private Subject subject;
+    @JoinColumn(name = "id_schedule", nullable = false)
+    private Schedule schedule;
 
 
 }

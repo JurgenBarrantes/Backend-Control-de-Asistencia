@@ -5,8 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,9 +25,12 @@ public class Subject { // representa una asignatura o materia en el sistema
 
     @Column(nullable = false, length = 60)
     private String name;
-    
-    @ManyToOne
-    @JoinColumn(name = "id_teacher", nullable = false)
-    private Teacher teacher; // profesor que imparte la asignatura
-    
+
+    /*
+     * @ManyToOne
+     * 
+     * @JoinColumn(name = "id_teacher", nullable = false)
+     * private Teacher teacher; // profesor que imparte la asignatura
+     */
+
 }

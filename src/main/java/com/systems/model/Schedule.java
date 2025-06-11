@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Table(name = "schedules")
-public class Schedule {
+public class Schedule { // para definir los horarios de las clases
     @Id
     @EqualsAndHashCode.Include
     private Integer idSchedule;
@@ -35,10 +35,14 @@ public class Schedule {
     private LocalTime endTime;
 
     @ManyToOne
-    @JoinColumn(name = "Id_classroom", nullable = false)
+    @JoinColumn(name = "id_classroom", nullable = false)
     private Classroom classroom;
 
-    @ManyToOne
+    
+
+    /*@ManyToOne
     @JoinColumn(name = "id_subject", nullable = false)
-    private Subject subject;
+    private Subject subject;*/
+
+
 }
