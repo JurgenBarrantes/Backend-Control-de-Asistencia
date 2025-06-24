@@ -30,7 +30,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequestMapping("/schedules")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class ScheduleController {
+public class ScheduleController { //es para manejar las solicitudes relacionadas con los horarios
     private final IScheduleService service;
 	private final ModelMapper modelMapper;
 
@@ -67,7 +67,7 @@ public class ScheduleController {
 		// Publisher obj = service.update(modelMapper.map(dto,Publisher.class), id);
 		// PublisherDTO dto1 = modelMapper.map(obj, PublisherDTO.class);
 		// return ResponseEntity.ok(dto1);
-
+		dto.setIdSchedule(id);
 		Schedule obj = service.update(convertToEntity(dto), id);
 		ScheduleDTO dto1 = convertToDto(obj);
 		return ResponseEntity.ok(dto1);

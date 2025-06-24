@@ -13,4 +13,9 @@ public class AttendanceDTO {
     private String entryTime;
     private boolean isPresent;
     private boolean isLate;
+    
+    // IDs para las relaciones
+    private Integer classroomId;
+    private Integer scheduleId;
+    private Integer studentId;
 }

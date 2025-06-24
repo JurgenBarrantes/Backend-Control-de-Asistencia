@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -32,21 +33,35 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequestMapping("/persons")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class PersonController {
+public class PersonController { //es para manejar las solicitudes relacionadas con las personas (estudiantes, profesores, etc.)
     private final IPersonService service;
 	private final ModelMapper modelMapper;
 
+
+	
 	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
-	public ResponseEntity<List<PersonDTO>> findAll() throws Exception {
-		// ModelMapper modelMapper = new ModelMapper();
-		// return service.findAll();
-		// List<PublisherDTO> list = service.findAll().stream().map(e -> new
-		// PublisherDTO(e.getIdPublisher(), e.getName(), e.getAddress())).toList();
-		// List<PublisherDTO> list = service.findAll().stream().map(e ->
-		// modelMapper.map(e, PublisherDTO.class)).toList();
-
-		List<PersonDTO> list = service.findAll().stream().map(this::convertToDto).toList();
+	public ResponseEntity<List<PersonDTO>> findAll(@RequestParam(value = "search", required = false) String search) throws Exception {
+		
+		List<PersonDTO> list;
+		
+		// Filtrar según el parámetro search
+		if ("teachers".equalsIgnoreCase(search)) {
+			// Obtener solo personas que son teachers
+			list = service.findPersonsWhoAreTeachers().stream().map(this::convertToDto).toList();
+			System.out.println("=== FILTERING TEACHERS ===");
+			System.out.println("Found " + list.size() + " teachers");
+		} else if ("students".equalsIgnoreCase(search)) {
+			// Obtener solo personas que son students
+			list = service.findPersonsWhoAreStudents().stream().map(this::convertToDto).toList();
+			System.out.println("=== FILTERING STUDENTS ===");
+			System.out.println("Found " + list.size() + " students");
+		} else {
+			// Sin filtro, obtener todas las personas
+			list = service.findAll().stream().map(this::convertToDto).toList();
+			System.out.println("=== NO FILTER - ALL PERSONS ===");
+			System.out.println("Found " + list.size() + " persons");
+		}
 
 		return ResponseEntity.ok(list);
 	}
@@ -78,7 +93,7 @@ public class PersonController {
 		// Publisher obj = service.update(modelMapper.map(dto,Publisher.class), id);
 		// PublisherDTO dto1 = modelMapper.map(obj, PublisherDTO.class);
 		// return ResponseEntity.ok(dto1);
-
+		dto.setIdPerson(id);
 		Person obj = service.update(convertToEntity(dto), id);
 		PersonDTO dto1 = convertToDto(obj);
 		return ResponseEntity.ok(dto1);
@@ -99,7 +114,7 @@ public class PersonController {
 		// Generar links informativos
 		// localhost:9090/publishers/5
 		WebMvcLinkBuilder link1 = linkTo(methodOn(this.getClass()).findById(id));
-		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll());
+		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll(null));
 		resource.add(link1.withRel("publisher-self-info"));
 		resource.add(link2.withRel("publisher-all-info"));
 

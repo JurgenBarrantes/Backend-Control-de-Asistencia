@@ -7,7 +7,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.systems.dto.AttendanceDTO;
+import com.systems.dto.ClassAttendanceDTO;
+import com.systems.dto.ClassAttendanceResponseDTO;
 import com.systems.model.Attendance;
 import com.systems.service.IAttendanceService;
 
@@ -32,13 +33,13 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequestMapping("/attendances")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class AttendanceController {
+public class AttendanceController { //es para manejar las solicitudes relacionadas con la asistencia
     private final IAttendanceService service;
 	private final ModelMapper modelMapper;
 
-	@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
+	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
-	public ResponseEntity<List<AttendanceDTO>> findAll() throws Exception {
+	public ResponseEntity<List<AttendanceDTO>> findAll() throws Exception { 
 		List<AttendanceDTO> list = service.findAll().stream().map(this::convertToDto).toList();
 
 		return ResponseEntity.ok(list);
@@ -68,7 +69,7 @@ public class AttendanceController {
 		// Publisher obj = service.update(modelMapper.map(dto,Publisher.class), id);
 		// PublisherDTO dto1 = modelMapper.map(obj, PublisherDTO.class);
 		// return ResponseEntity.ok(dto1);
-
+		dto.setIdAttendance(id);
 		Attendance obj = service.update(convertToEntity(dto), id);
 		AttendanceDTO dto1 = convertToDto(obj);
 		return ResponseEntity.ok(dto1);
@@ -94,6 +95,14 @@ public class AttendanceController {
 		resource.add(link2.withRel("attendance-all-info"));
 
 		return resource;
+	}
+
+	//esto es para manejar la asistencia de una clase en bloque
+	@PostMapping("/bulk-class")
+	public ResponseEntity<ClassAttendanceResponseDTO> saveClassAttendance(@RequestBody ClassAttendanceDTO classAttendanceDto) 
+			throws Exception {
+		ClassAttendanceResponseDTO response = service.saveClassAttendance(classAttendanceDto);
+		return ResponseEntity.ok(response);
 	}
 
 	private AttendanceDTO convertToDto(Attendance obj) {

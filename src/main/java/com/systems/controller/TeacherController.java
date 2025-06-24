@@ -33,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/teachers")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*") 
-public class TeacherController {
+public class TeacherController { //es para manejar las solicitudes relacionadas con los profesores
     private final ITeacherService service;
 	private final ModelMapper modelMapper;
 
@@ -68,7 +68,7 @@ public class TeacherController {
 	@PutMapping("/{id}")
 	public ResponseEntity<TeacherDTO> update(@PathVariable("id") Integer id, @RequestBody TeacherDTO dto)
 			throws Exception {
-
+		dto.setIdTeacher(id);
 		Teacher obj = service.update(convertToEntity(dto), id);
 		TeacherDTO dto1 = convertToDto(obj);
 		return ResponseEntity.ok(dto1);
@@ -96,10 +96,37 @@ public class TeacherController {
 	}
 
 	private TeacherDTO convertToDto(Teacher obj) {
-		return modelMapper.map(obj, TeacherDTO.class);
+		TeacherDTO dto = new TeacherDTO();
+		dto.setIdTeacher(obj.getIdTeacher());
+		
+		// Debug logging
+		System.out.println("=== TEACHER CONVERSION DEBUG ===");
+		System.out.println("Teacher ID: " + obj.getIdTeacher());
+		System.out.println("Person is null: " + (obj.getPerson() == null));
+		
+		// Mapear información de la persona asociada
+		if (obj.getPerson() != null) {
+			System.out.println("Person found - FirstName: " + obj.getPerson().getFirstName());
+			dto.setFirstName(obj.getPerson().getFirstName());
+			dto.setLastName(obj.getPerson().getLastName());
+			dto.setFullName(obj.getPerson().getFirstName() + " " + obj.getPerson().getLastName());
+			dto.setDni(obj.getPerson().getDni());
+			dto.setEmail(obj.getPerson().getEmail());
+			dto.setPhone(obj.getPerson().getPhone());
+		} else {
+			System.out.println("Person is NULL for teacher: " + obj.getIdTeacher());
+		}
+		
+		return dto;
 	}
 
 	private Teacher convertToEntity(TeacherDTO dto) {
-		return modelMapper.map(dto, Teacher.class);
+		Teacher entity = new Teacher();
+		entity.setIdTeacher(dto.getIdTeacher());
+		
+		// Para operaciones POST/PUT, necesitarías manejar la relación con Person
+		// Por ahora, usar el mapeo básico para no romper funcionalidad existente
+		
+		return entity;
 	}
 }

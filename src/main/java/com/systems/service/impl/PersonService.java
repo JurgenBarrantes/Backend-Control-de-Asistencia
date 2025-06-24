@@ -1,5 +1,6 @@
 package com.systems.service.impl;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.systems.model.Person;
@@ -18,5 +19,14 @@ public class PersonService extends GenericService<Person, Integer> implements IP
     protected IGenericRepo<Person, Integer> getRepo() {
         return repo;
     }
-
+    
+    @Override
+    public List<Person> findPersonsWhoAreTeachers() throws Exception {
+        return repo.findPersonsWhoAreTeachers();
+    }
+    
+    @Override
+    public List<Person> findPersonsWhoAreStudents() throws Exception {
+        return repo.findPersonsWhoAreStudents();
+    }
 }

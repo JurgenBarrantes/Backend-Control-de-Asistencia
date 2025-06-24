@@ -9,5 +9,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TeacherDTO {
     private Integer idTeacher;
-
+    
+    // Información básica de la persona asociada
+    private String firstName;
+    private String lastName;
+    private String fullName; // Nombre completo concatenado
+    private String dni;
+    private String email;
+    private String phone;
 }

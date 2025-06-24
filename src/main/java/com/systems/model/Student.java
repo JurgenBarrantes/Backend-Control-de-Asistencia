@@ -1,6 +1,7 @@
 package com.systems.model;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,7 +26,7 @@ public class Student {
     @EqualsAndHashCode.Include
     private Integer idStudent;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_person", nullable = false, foreignKey = @ForeignKey(name = "FK_STUDENT_PERSON"))
     private Person person;
 

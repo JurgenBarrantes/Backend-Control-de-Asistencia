@@ -9,5 +9,4 @@ class ControlDeAsistenciaBckendApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }

@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/users")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class UserController {
+public class UserController { // es para manejar las solicitudes relacionadas con los usuarios
     private final IUserService service;
 	private final ModelMapper modelMapper;
 
@@ -63,7 +63,7 @@ public class UserController {
 	@PutMapping("/{id}")
 	public ResponseEntity<UserDTO> update(@PathVariable("id") Integer id, @RequestBody UserDTO dto)
 			throws Exception {
-
+		dto.setIdUser(id);
 		User obj = service.update(convertToEntity(dto), id);
 		UserDTO dto1 = convertToDto(obj);
 		return ResponseEntity.ok(dto1);

@@ -30,7 +30,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequestMapping("/subjects")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class SubjectController {
+public class SubjectController { //es para manejar las solicitudes relacionadas con las asignaturas
     private final ISubjectService service;
 	private final ModelMapper modelMapper;
 
@@ -63,6 +63,7 @@ public class SubjectController {
 	@PutMapping("/{id}")
 	public ResponseEntity<SubjectDTO> update(@PathVariable("id") Integer id, @RequestBody SubjectDTO dto)
 			throws Exception {
+		dto.setIdSubject(id);
 		Subject obj = service.update(convertToEntity(dto), id);
 		SubjectDTO dto1 = convertToDto(obj);
 		return ResponseEntity.ok(dto1);

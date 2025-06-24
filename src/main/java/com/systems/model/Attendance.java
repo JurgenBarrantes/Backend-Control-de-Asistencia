@@ -47,5 +47,8 @@ public class Attendance { //para el control de asistencia de los estudiantes
     @JoinColumn(name = "id_schedule", nullable = false)
     private Schedule schedule;
 
+    @ManyToOne
+    @JoinColumn(name = "id_student", nullable = false)
+    private Student student;
 
 }
