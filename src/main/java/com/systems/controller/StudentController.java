@@ -3,7 +3,7 @@ package com.systems.controller;
 import java.net.URI;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
+//import org.modelmapper.ModelMapper;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +34,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @CrossOrigin(origins = "*")
 public class StudentController { //es para manejar las solicitudes relacionadas con los estudiantes
     private final IStudentService service;
-	private final ModelMapper modelMapper;
+	//private final ModelMapper modelMapper;
 
 	@GetMapping
 	public ResponseEntity<List<StudentDTO>> findAll() throws Exception {
