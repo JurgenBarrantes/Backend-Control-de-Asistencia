@@ -1,14 +1,12 @@
 package com.systems.controller;
 
-
-
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import java.net.URI;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
+//import org.modelmapper.ModelMapper;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
@@ -32,12 +30,12 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/teachers")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") 
-public class TeacherController { //es para manejar las solicitudes relacionadas con los profesores
-    private final ITeacherService service;
-	private final ModelMapper modelMapper;
+@CrossOrigin(origins = "*")
+public class TeacherController { // es para manejar las solicitudes relacionadas con los profesores
+	private final ITeacherService service;
+	// private final ModelMapper modelMapper;
 
-	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
+	// @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
 	public ResponseEntity<List<TeacherDTO>> findAll() throws Exception {
 
@@ -86,7 +84,6 @@ public class TeacherController { //es para manejar las solicitudes relacionadas 
 		Teacher obj = service.findById(id);
 		EntityModel<TeacherDTO> resource = EntityModel.of(convertToDto(obj));
 
-
 		WebMvcLinkBuilder link1 = linkTo(methodOn(this.getClass()).findById(id));
 		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll());
 		resource.add(link1.withRel("teacher-self-info"));
@@ -98,12 +95,12 @@ public class TeacherController { //es para manejar las solicitudes relacionadas 
 	private TeacherDTO convertToDto(Teacher obj) {
 		TeacherDTO dto = new TeacherDTO();
 		dto.setIdTeacher(obj.getIdTeacher());
-		
+
 		// Debug logging
-		System.out.println("=== TEACHER CONVERSION DEBUG ===");
+		System.out.println("TEACHER CONVERSION DEBUG");
 		System.out.println("Teacher ID: " + obj.getIdTeacher());
 		System.out.println("Person is null: " + (obj.getPerson() == null));
-		
+
 		// Mapear información de la persona asociada
 		if (obj.getPerson() != null) {
 			System.out.println("Person found - FirstName: " + obj.getPerson().getFirstName());
@@ -116,17 +113,17 @@ public class TeacherController { //es para manejar las solicitudes relacionadas 
 		} else {
 			System.out.println("Person is NULL for teacher: " + obj.getIdTeacher());
 		}
-		
+
 		return dto;
 	}
 
 	private Teacher convertToEntity(TeacherDTO dto) {
 		Teacher entity = new Teacher();
 		entity.setIdTeacher(dto.getIdTeacher());
-		
+
 		// Para operaciones POST/PUT, necesitarías manejar la relación con Person
 		// Por ahora, usar el mapeo básico para no romper funcionalidad existente
-		
+
 		return entity;
 	}
 }
