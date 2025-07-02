@@ -28,23 +28,21 @@ import lombok.RequiredArgsConstructor;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
-
 @RestController
 @RequestMapping("/persons")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
-public class PersonController { //es para manejar las solicitudes relacionadas con las personas (estudiantes, profesores, etc.)
-    private final IPersonService service;
+public class PersonController { // es para manejar las solicitudes relacionadas con las personas (estudiantes,
+								// profesores, etc.)
+	private final IPersonService service;
 	private final ModelMapper modelMapper;
 
-
-	
-	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
+	// @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
-	public ResponseEntity<List<PersonDTO>> findAll(@RequestParam(value = "search", required = false) String search) throws Exception {
-		
+	public ResponseEntity<List<PersonDTO>> findAll(@RequestParam(value = "search", required = false) String search)
+			throws Exception {
+
 		List<PersonDTO> list;
-		
+
 		// Filtrar según el parámetro search
 		if ("teachers".equalsIgnoreCase(search)) {
 			// Obtener solo personas que son teachers
