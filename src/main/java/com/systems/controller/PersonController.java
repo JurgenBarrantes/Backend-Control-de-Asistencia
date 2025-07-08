@@ -4,10 +4,11 @@ import java.net.URI;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
+//import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +33,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequestMapping("/persons")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+//@CrossOrigin(origins = "*")
 public class PersonController { //es para manejar las solicitudes relacionadas con las personas (estudiantes, profesores, etc.)
     private final IPersonService service;
 	private final ModelMapper modelMapper;
@@ -41,29 +42,46 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 	
 	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
-	public ResponseEntity<List<PersonDTO>> findAll(@RequestParam(value = "search", required = false) String search) throws Exception {
+	public ResponseEntity<?> findAll(
+			@RequestParam(value = "search", required = false) String search,
+			@RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer size,
+			@RequestParam(required = false) String sortBy,
+			@RequestParam(required = false) String sortDirection) throws Exception {
 		
-		List<PersonDTO> list;
-		
-		// Filtrar según el parámetro search
-		if ("teachers".equalsIgnoreCase(search)) {
-			// Obtener solo personas que son teachers
-			list = service.findPersonsWhoAreTeachers().stream().map(this::convertToDto).toList();
-			System.out.println("=== FILTERING TEACHERS ===");
-			System.out.println("Found " + list.size() + " teachers");
-		} else if ("students".equalsIgnoreCase(search)) {
-			// Obtener solo personas que son students
-			list = service.findPersonsWhoAreStudents().stream().map(this::convertToDto).toList();
-			System.out.println("=== FILTERING STUDENTS ===");
-			System.out.println("Found " + list.size() + " students");
+		// Si se proporcionan parámetros de paginación, usar paginación
+		if (page != null || size != null) {
+			int pageNumber = page != null ? page : 0;
+			int pageSize = size != null ? size : 10;
+			String sortField = sortBy != null ? sortBy : "idPerson";
+			String sortDir = sortDirection != null ? sortDirection : "asc";
+			
+			// Para paginación, usar solo el servicio general (filtrado se haría en el frontend)
+			Page<Person> entityPage = service.findAllPaginated(pageNumber, pageSize, sortField, sortDir);
+			Page<PersonDTO> dtoPage = entityPage.map(this::convertToDto);
+			System.out.println("=== PAGINATED PERSONS ===");
+			System.out.println("Found " + dtoPage.getTotalElements() + " total elements, page " + pageNumber + " of " + dtoPage.getTotalPages());
+			return ResponseEntity.ok(dtoPage);
 		} else {
-			// Sin filtro, obtener todas las personas
-			list = service.findAll().stream().map(this::convertToDto).toList();
-			System.out.println("=== NO FILTER - ALL PERSONS ===");
-			System.out.println("Found " + list.size() + " persons");
+			// Sin paginación, devolver lista completa con filtrado
+			List<PersonDTO> list;
+			
+			if ("teachers".equalsIgnoreCase(search)) {
+				list = service.findPersonsWhoAreTeachers().stream().map(this::convertToDto).toList();
+				System.out.println("=== FILTERING TEACHERS ===");
+				System.out.println("Found " + list.size() + " teachers");
+			} else if ("students".equalsIgnoreCase(search)) {
+				list = service.findPersonsWhoAreStudents().stream().map(this::convertToDto).toList();
+				System.out.println("=== FILTERING STUDENTS ===");
+				System.out.println("Found " + list.size() + " students");
+			} else {
+				list = service.findAll().stream().map(this::convertToDto).toList();
+				System.out.println("=== NO FILTER - ALL PERSONS ===");
+				System.out.println("Found " + list.size() + " persons");
+			}
+			
+			return ResponseEntity.ok(list);
 		}
-
-		return ResponseEntity.ok(list);
 	}
 
 	@GetMapping("/{id}")
@@ -79,7 +97,7 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 		Person obj = service.save(convertToEntity(dto));
 		// return ResponseEntity.ok(obj);
 
-		// location: http://localhost:9090/persons/{id}
+		// location: http://localhost:9091/persons/{id}
 		URI location = ServletUriComponentsBuilder
 				.fromCurrentRequest()
 				.path("/{id}")
@@ -114,7 +132,7 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 		// Generar links informativos
 		// localhost:9090/publishers/5
 		WebMvcLinkBuilder link1 = linkTo(methodOn(this.getClass()).findById(id));
-		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll(null));
+		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll(null, null, null, null, null));
 		resource.add(link1.withRel("publisher-self-info"));
 		resource.add(link2.withRel("publisher-all-info"));
 

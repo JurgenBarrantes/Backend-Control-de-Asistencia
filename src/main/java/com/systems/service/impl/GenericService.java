@@ -6,6 +6,11 @@ import com.systems.service.IGenericService;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 public abstract class GenericService<T, ID> implements IGenericService<T, ID> {
     protected abstract IGenericRepo<T, ID> getRepo();
 
@@ -36,6 +41,19 @@ public abstract class GenericService<T, ID> implements IGenericService<T, ID> {
     public void delete(ID id) throws Exception {
         getRepo().findById(id).orElseThrow(()-> new ModelNotFoundException("ID NOT FOUND: "+ id));
         getRepo().deleteById(id);
+    }
+
+    @Override
+    public Page<T> findAllPaginated(int page, int size) throws Exception {
+        Pageable pageable = PageRequest.of(page, size);
+        return getRepo().findAll(pageable);
+    }
+
+    @Override
+    public Page<T> findAllPaginated(int page, int size, String sortBy, String sortDirection) throws Exception {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return getRepo().findAll(pageable);
     }
 
 }
