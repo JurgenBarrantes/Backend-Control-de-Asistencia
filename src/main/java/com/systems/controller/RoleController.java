@@ -22,6 +22,9 @@ import com.systems.dto.RoleDTO;
 import com.systems.model.Role;
 import com.systems.service.IRoleService;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -38,17 +41,22 @@ public class RoleController {
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDirection) throws Exception {
-        
+
         // Si se proporcionan parámetros de paginación, usar paginación
         if (page != null || size != null) {
-            int pageNumber = page != null ? page : 0;
+            int userPageNumber = page != null ? page : 1; // Frontend usa base-1
             int pageSize = size != null ? size : 10;
             String sortField = sortBy != null ? sortBy : "idRole";
             String sortDir = sortDirection != null ? sortDirection : "asc";
-            
-            Page<Role> entityPage = service.findAllPaginated(pageNumber, pageSize, sortField, sortDir);
+
+            // Convertir de base-1 (frontend) a base-0 (Spring)
+            int springPageNumber = Math.max(0, userPageNumber - 1);
+
+            Page<Role> entityPage = service.findAllPaginated(springPageNumber, pageSize, sortField, sortDir);
             Page<RoleDTO> dtoPage = entityPage.map(this::convertToDto);
-            return ResponseEntity.ok(dtoPage);
+
+            // Usar CustomPageResponse para manejar la paginación de forma consistente
+            return ResponseEntity.ok(new CustomPageResponse<>(dtoPage, userPageNumber));
         } else {
             // Sin parámetros de paginación, devolver lista completa
             List<RoleDTO> list = service.findAll().stream().map(this::convertToDto).toList();
@@ -64,12 +72,13 @@ public class RoleController {
 
     @PostMapping
     public ResponseEntity<Void> save(@RequestBody RoleDTO dto) throws Exception {
-        // TEMPORAL: Generar ID manualmente hasta que se configure AUTO_INCREMENT en la DB
+        // TEMPORAL: Generar ID manualmente hasta que se configure AUTO_INCREMENT en la
+        // DB
         if (dto.getIdRole() == null) {
             Integer nextId = getNextRoleId();
             dto.setIdRole(nextId);
         }
-        
+
         // Crear la entidad
         Role entity = convertToEntity(dto);
         Role obj = service.save(entity);
@@ -80,8 +89,9 @@ public class RoleController {
                 .buildAndExpand(obj.getIdRole()).toUri();
         return ResponseEntity.created(location).build();
     }
-    
-    // TEMPORAL: Método para generar ID manualmente hasta que se configure AUTO_INCREMENT
+
+    // TEMPORAL: Método para generar ID manualmente hasta que se configure
+    // AUTO_INCREMENT
     private Integer getNextRoleId() {
         try {
             List<Role> allRoles = service.findAll();
@@ -144,9 +154,9 @@ public class RoleController {
         if (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) {
             throw new IllegalArgumentException("La descripción del rol es obligatoria");
         }
-        
+
         Role role = new Role();
-        
+
         // Solo establecer el ID si no es null (para operaciones PUT)
         // Para POST, el ID será null y Hibernate lo generará automáticamente
         if (dto.getIdRole() != null) {
@@ -154,7 +164,64 @@ public class RoleController {
         }
         role.setName(dto.getName().trim());
         role.setDescription(dto.getDescription().trim());
-        
+
         return role;
+    }
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+// Clase helper para respuesta de paginación personalizada
+class CustomPageResponse<T> {
+    private java.util.List<T> content;
+    private CustomPageable pageable;
+    private boolean last;
+    private int totalElements;
+    private int totalPages;
+    private boolean first;
+    private int size;
+    private int number;
+    private org.springframework.data.domain.Sort sort;
+    private int numberOfElements;
+    private boolean empty;
+
+    public CustomPageResponse(org.springframework.data.domain.Page<T> page, int displayPageNumber) {
+        this.content = page.getContent();
+        this.totalElements = (int) page.getTotalElements();
+        this.totalPages = page.getTotalPages();
+        this.size = page.getSize();
+        this.number = displayPageNumber; // Número de página que se muestra (base-1)
+        this.sort = page.getSort();
+        this.numberOfElements = page.getNumberOfElements();
+        this.empty = page.isEmpty();
+
+        // Ajustar first/last basado en el número de página mostrado (base-1)
+        this.first = (displayPageNumber == 1);
+        this.last = (displayPageNumber == this.totalPages);
+
+        // Crear pageable personalizado con offset correcto
+        long correctOffset = (long) (displayPageNumber - 1) * page.getSize();
+        this.pageable = new CustomPageable(displayPageNumber, page.getSize(), page.getSort(), correctOffset);
+    }
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+// Clase helper para Pageable personalizado
+class CustomPageable {
+    private int pageNumber;
+    private int pageSize;
+    private org.springframework.data.domain.Sort sort;
+    private long offset;
+    private boolean paged = true;
+    private boolean unpaged = false;
+
+    public CustomPageable(int pageNumber, int pageSize, org.springframework.data.domain.Sort sort, long offset) {
+        this.pageNumber = pageNumber;
+        this.pageSize = pageSize;
+        this.sort = sort;
+        this.offset = offset;
     }
 }

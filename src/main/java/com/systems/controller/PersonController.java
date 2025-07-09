@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.systems.dto.PersonDTO;
-import com.systems.dto.UserDTO;
+import com.systems.dto.UserResponseDTO;
 import com.systems.dto.RoleDTO;
 import com.systems.model.Person;
 import com.systems.model.User;
@@ -163,10 +163,10 @@ public class PersonController { // es para manejar las solicitudes relacionadas 
 
 		// Convertir User completo si existe
 		if (obj.getUser() != null) {
-			UserDTO userDto = new UserDTO();
+			UserResponseDTO userDto = new UserResponseDTO();
 			userDto.setIdUser(obj.getUser().getIdUser());
 			userDto.setUsername(obj.getUser().getUsername());
-			// No incluir password por seguridad
+			// NO incluir password por seguridad
 			userDto.setEnabled(obj.getUser().getEnabled());
 
 			// Convertir roles si existen

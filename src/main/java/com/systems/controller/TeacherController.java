@@ -29,6 +29,9 @@ import com.systems.model.Teacher;
 import com.systems.service.IPersonService;
 import com.systems.service.ITeacherService;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -50,14 +53,19 @@ public class TeacherController { // es para manejar las solicitudes relacionadas
 
 		// Si se proporcionan parámetros de paginación, usar paginación
 		if (page != null || size != null) {
-			int pageNumber = page != null ? page : 0;
+			int userPageNumber = page != null ? page : 1; // Frontend usa base-1
 			int pageSize = size != null ? size : 10;
 			String sortField = sortBy != null ? sortBy : "idTeacher";
 			String sortDir = sortDirection != null ? sortDirection : "asc";
 
-			Page<Teacher> entityPage = service.findAllPaginated(pageNumber, pageSize, sortField, sortDir);
+			// Convertir de base-1 (frontend) a base-0 (Spring)
+			int springPageNumber = Math.max(0, userPageNumber - 1);
+
+			Page<Teacher> entityPage = service.findAllPaginated(springPageNumber, pageSize, sortField, sortDir);
 			Page<TeacherDTO> dtoPage = entityPage.map(this::convertToDto);
-			return ResponseEntity.ok(dtoPage);
+
+			// Usar CustomPageResponse para manejar la paginación de forma consistente
+			return ResponseEntity.ok(new CustomPageResponse<>(dtoPage, userPageNumber));
 		} else {
 			// Sin parámetros de paginación, devolver lista completa
 			List<TeacherDTO> list = service.findAll().stream().map(this::convertToDto).toList();
@@ -117,14 +125,8 @@ public class TeacherController { // es para manejar las solicitudes relacionadas
 		TeacherDTO dto = new TeacherDTO();
 		dto.setIdTeacher(obj.getIdTeacher());
 
-		// Debug logging
-		System.out.println("TEACHER CONVERSION DEBUG");
-		System.out.println("Teacher ID: " + obj.getIdTeacher());
-		System.out.println("Person is null: " + (obj.getPerson() == null));
-
 		// Mapear información de la persona asociada
 		if (obj.getPerson() != null) {
-			System.out.println("Person found - FirstName: " + obj.getPerson().getFirstName());
 			dto.setFirstName(obj.getPerson().getFirstName());
 			dto.setLastName(obj.getPerson().getLastName());
 			dto.setFullName(obj.getPerson().getFirstName() + " " + obj.getPerson().getLastName());
@@ -134,8 +136,6 @@ public class TeacherController { // es para manejar las solicitudes relacionadas
 			dto.setAddress(obj.getPerson().getAddress());
 			dto.setGender(obj.getPerson().getGender());
 			dto.setBirthdate(obj.getPerson().getBirthdate() != null ? obj.getPerson().getBirthdate().toString() : null);
-		} else {
-			System.out.println("Person is NULL for teacher: " + obj.getIdTeacher());
 		}
 
 		return dto;
@@ -258,5 +258,62 @@ public class TeacherController { // es para manejar las solicitudes relacionadas
 			System.err.println("Error updating Teacher entity: " + e.getMessage());
 			throw new RuntimeException("Error al actualizar el profesor: " + e.getMessage(), e);
 		}
+	}
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+// Clase helper para respuesta de paginación personalizada
+class CustomPageResponse<T> {
+	private java.util.List<T> content;
+	private CustomPageable pageable;
+	private boolean last;
+	private int totalElements;
+	private int totalPages;
+	private boolean first;
+	private int size;
+	private int number;
+	private org.springframework.data.domain.Sort sort;
+	private int numberOfElements;
+	private boolean empty;
+
+	public CustomPageResponse(org.springframework.data.domain.Page<T> page, int displayPageNumber) {
+		this.content = page.getContent();
+		this.totalElements = (int) page.getTotalElements();
+		this.totalPages = page.getTotalPages();
+		this.size = page.getSize();
+		this.number = displayPageNumber; // Número de página que se muestra (base-1)
+		this.sort = page.getSort();
+		this.numberOfElements = page.getNumberOfElements();
+		this.empty = page.isEmpty();
+
+		// Ajustar first/last basado en el número de página mostrado (base-1)
+		this.first = (displayPageNumber == 1);
+		this.last = (displayPageNumber == this.totalPages);
+
+		// Crear pageable personalizado con offset correcto
+		long correctOffset = (long) (displayPageNumber - 1) * page.getSize();
+		this.pageable = new CustomPageable(displayPageNumber, page.getSize(), page.getSort(), correctOffset);
+	}
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+// Clase helper para Pageable personalizado
+class CustomPageable {
+	private int pageNumber;
+	private int pageSize;
+	private org.springframework.data.domain.Sort sort;
+	private long offset;
+	private boolean paged = true;
+	private boolean unpaged = false;
+
+	public CustomPageable(int pageNumber, int pageSize, org.springframework.data.domain.Sort sort, long offset) {
+		this.pageNumber = pageNumber;
+		this.pageSize = pageSize;
+		this.sort = sort;
+		this.offset = offset;
 	}
 }

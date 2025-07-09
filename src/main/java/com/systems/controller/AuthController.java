@@ -1,28 +1,32 @@
 package com.systems.controller;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.systems.dto.AuthUserDTO;
 import com.systems.dto.LoginRequest;
 import com.systems.dto.LoginResponse;
 import com.systems.dto.PersonDTO;
 import com.systems.dto.RefreshRequest;
 import com.systems.dto.RegisterRequest;
-import com.systems.dto.RoleDTO;
+import com.systems.dto.TokenInfo;
 import com.systems.dto.TokenResponse;
-import com.systems.dto.UserDTO;
 import com.systems.model.Person;
 import com.systems.model.Role;
 import com.systems.model.User;
+import com.systems.security.JwtTokenUtil;
+import com.systems.security.JwtUserDetailsService;
 import com.systems.service.IPersonService;
 import com.systems.service.IRoleService;
 import com.systems.service.IUserService;
@@ -38,6 +42,10 @@ public class AuthController {
     private final IPersonService personService;
     private final IRoleService roleService;
 
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final JwtUserDetailsService jwtUserDetailsService;
+    
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
@@ -61,10 +69,17 @@ public class AuthController {
             String accessToken = "fake-access-token-" + user.getUsername();
             String refreshToken = "fake-refresh-token-" + user.getUsername();
 
-            // Convertir User a UserDTO
-            UserDTO userDTO = convertUserToDto(user);
+            // Definir tiempos de expiración
+            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(1); // 1 hora
+            LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días
 
-            LoginResponse response = new LoginResponse(accessToken, refreshToken, userDTO);
+            // Crear objeto TokenInfo
+            TokenInfo tokenInfo = new TokenInfo(accessToken, refreshToken, accessTokenExpiry, refreshTokenExpiry);
+
+            // Convertir User a AuthUserDTO
+            AuthUserDTO userDTO = convertUserToDto(user);
+
+            LoginResponse response = new LoginResponse(tokenInfo, userDTO);
 
             return ResponseEntity.ok(response);
 
@@ -131,9 +146,16 @@ public class AuthController {
             String accessToken = "fake-access-token-" + savedUser.getUsername();
             String refreshToken = "fake-refresh-token-" + savedUser.getUsername();
 
-            UserDTO userDTO = convertUserToDto(savedUser);
+            // Definir tiempos de expiración
+            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(1); // 1 hora
+            LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días
 
-            LoginResponse response = new LoginResponse(accessToken, refreshToken, userDTO);
+            // Crear objeto TokenInfo
+            TokenInfo tokenInfo = new TokenInfo(accessToken, refreshToken, accessTokenExpiry, refreshTokenExpiry);
+
+            AuthUserDTO userDTO = convertUserToDto(savedUser);
+
+            LoginResponse response = new LoginResponse(tokenInfo, userDTO);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
@@ -157,18 +179,18 @@ public class AuthController {
             // Extraer username del token
             String username = refreshToken.replace("fake-refresh-token-", "");
 
-            // Verificar que el usuario aún existe
-            Optional<User> userOpt = userService.findByUsername(username);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("Usuario no encontrado");
-            }
-
             // Generar nuevos tokens
             String newAccessToken = "fake-access-token-" + username;
             String newRefreshToken = "fake-refresh-token-" + username;
 
-            TokenResponse response = new TokenResponse(newAccessToken, newRefreshToken);
+            // Definir tiempos de expiración para los nuevos tokens
+            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(1); // 1 hora
+            LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días
+
+            // Crear objeto TokenInfo
+            TokenInfo tokenInfo = new TokenInfo(newAccessToken, newRefreshToken, accessTokenExpiry, refreshTokenExpiry);
+
+            TokenResponse response = new TokenResponse(tokenInfo);
 
             return ResponseEntity.ok(response);
 
@@ -184,9 +206,9 @@ public class AuthController {
         return ResponseEntity.ok("Logout exitoso");
     }
 
-    // Método helper para convertir User a UserDTO
-    private UserDTO convertUserToDto(User user) {
-        UserDTO dto = new UserDTO();
+    // Método helper para convertir User a AuthUserDTO
+    private AuthUserDTO convertUserToDto(User user) {
+        AuthUserDTO dto = new AuthUserDTO();
         dto.setIdUser(user.getIdUser());
         dto.setUsername(user.getUsername());
         dto.setEnabled(user.getEnabled());
@@ -207,17 +229,13 @@ public class AuthController {
             dto.setPerson(personDTO);
         }
 
-        // Convertir roles
+        // Convertir roles a lista de strings
         if (user.getRoles() != null && !user.getRoles().isEmpty()) {
-            List<RoleDTO> roleDTOs = new ArrayList<>();
+            List<String> roleNames = new ArrayList<>();
             for (Role role : user.getRoles()) {
-                RoleDTO roleDTO = new RoleDTO();
-                roleDTO.setIdRole(role.getIdRole());
-                roleDTO.setName(role.getName());
-                roleDTO.setDescription(role.getDescription());
-                roleDTOs.add(roleDTO);
+                roleNames.add(role.getName());
             }
-            dto.setRoles(roleDTOs);
+            dto.setRoles(roleNames);
         }
 
         return dto;

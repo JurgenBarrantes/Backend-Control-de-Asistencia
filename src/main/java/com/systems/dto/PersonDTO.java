@@ -19,5 +19,5 @@ public class PersonDTO {
     private String address;
     private String phone;
     private String email;
-    private UserDTO user; // Objeto User completo en lugar de solo el ID
+    private UserResponseDTO user; // Objeto User sin password por seguridad
 }

@@ -1,5 +1,7 @@
 package com.systems.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,15 +10,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginResponse {
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType = "Bearer";
-    private UserDTO user;
-    
-    public LoginResponse(String accessToken, String refreshToken, UserDTO user) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.user = user;
-        this.tokenType = "Bearer";
+    private TokenInfo tokens;
+
+    // Campos del usuario sin encapsular
+    private Integer idUser;
+    private String username;
+    private Boolean enabled;
+    private List<String> roles;
+    private PersonDTO person;
+
+    public LoginResponse(TokenInfo tokens, AuthUserDTO user) {
+        this.tokens = tokens;
+        this.idUser = user.getIdUser();
+        this.username = user.getUsername();
+        this.enabled = user.getEnabled();
+        this.roles = user.getRoles();
+        this.person = user.getPerson();
     }
 }
