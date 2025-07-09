@@ -32,10 +32,14 @@ import com.systems.model.Classroom;
 import com.systems.model.Schedule;
 import com.systems.model.Subject;
 import com.systems.model.Teacher;
+import com.systems.security.AuthenticationHelper;
 import com.systems.service.IClassroomService;
 import com.systems.service.IScheduleService;
 import com.systems.service.ISubjectService;
 import com.systems.service.ITeacherService;
+import com.systems.service.IUserService;
+import com.systems.service.IStudentService;
+import com.systems.service.IEnrollmentService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -51,6 +55,10 @@ public class ClassroomController { // este controlador es para manejar las solic
     private final ITeacherService teacherService;
     private final ISubjectService subjectService;
     private final IScheduleService scheduleService;
+    private final AuthenticationHelper authHelper;
+    private final IUserService userService;
+    private final IStudentService studentService;
+    private final IEnrollmentService enrollmentService;
 
     @GetMapping
     public ResponseEntity<?> findAll(
@@ -59,31 +67,53 @@ public class ClassroomController { // este controlador es para manejar las solic
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDirection) throws Exception {
 
+        // Obtener el rol del usuario actual
+        String currentRole = authHelper.getCurrentUserRole();
+        String currentUsername = authHelper.getCurrentUsername();
+
+        // Obtener los classrooms filtrados según el rol
+        List<Classroom> filteredClassrooms = getFilteredClassrooms(currentRole, currentUsername);
+
         // Si se proporcionan parámetros de paginación, usar paginación
         if (page != null || size != null) {
             // Convertir página de base-1 a base-0 para Spring Data
-            // Si page es null, usar 1 como default (primera página en base-1)
             int userPageNumber = page != null ? page : 1;
             int springPageNumber = Math.max(0, userPageNumber - 1);
             int pageSize = size != null ? size : 10;
             String sortField = sortBy != null ? sortBy : "idClassroom";
             String sortDir = sortDirection != null ? sortDirection : "asc";
 
-            // Crear Pageable con sorting
-            Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortField).descending()
-                    : Sort.by(sortField).ascending();
-            Pageable pageable = PageRequest.of(springPageNumber, pageSize, sort);
+            // Aplicar sorting manualmente a la lista filtrada
+            List<ClassroomDTO> dtoList = filteredClassrooms.stream()
+                    .map(this::convertToDto)
+                    .sorted((c1, c2) -> {
+                        if (sortDir.equalsIgnoreCase("desc")) {
+                            return compareClassrooms(c2, c1, sortField);
+                        } else {
+                            return compareClassrooms(c1, c2, sortField);
+                        }
+                    })
+                    .toList();
 
-            // Usar el método que hace fetch join de teacher y subject
-            Page<Classroom> entityPage = service.findAllWithTeacherAndSubject(pageable);
-            Page<ClassroomDTO> dtoPage = entityPage.map(this::convertToDto);
+            // Aplicar paginación manual
+            int totalElements = dtoList.size();
+            int start = springPageNumber * pageSize;
+            int end = Math.min(start + pageSize, totalElements);
 
-            // Crear una respuesta personalizada que ajuste el número de página para mostrar
-            // base-1
-            return ResponseEntity.ok(new CustomPageResponse<>(dtoPage, userPageNumber));
+            List<ClassroomDTO> paginatedList = dtoList.subList(start, end);
+
+            // Crear respuesta de paginación manual
+            return ResponseEntity.ok(Map.of(
+                    "content", paginatedList,
+                    "totalElements", totalElements,
+                    "totalPages", (int) Math.ceil((double) totalElements / pageSize),
+                    "currentPage", userPageNumber,
+                    "pageSize", pageSize,
+                    "hasNext", end < totalElements,
+                    "hasPrevious", springPageNumber > 0));
         } else {
-            // Sin parámetros de paginación, devolver lista completa
-            List<ClassroomDTO> list = service.findAll().stream().map(this::convertToDto).toList();
+            // Sin parámetros de paginación, devolver lista completa filtrada
+            List<ClassroomDTO> list = filteredClassrooms.stream().map(this::convertToDto).toList();
             return ResponseEntity.ok(list);
         }
     }
@@ -250,5 +280,69 @@ public class ClassroomController { // este controlador es para manejar las solic
         }
 
         return classroom;
+    }
+
+    // Métodos auxiliares para filtrado por roles
+    private List<Classroom> getFilteredClassrooms(String role, String username) throws Exception {
+        if ("ADMIN".equals(role)) {
+            // Admin puede ver todos los classrooms
+            return service.findAll();
+        } else if ("TEACHER".equals(role)) {
+            // Teacher solo puede ver sus propios classrooms
+            return getClassroomsForTeacher(username);
+        } else if ("STUDENT".equals(role)) {
+            // Student solo puede ver los classrooms en los que está inscrito
+            return getClassroomsForStudent(username);
+        } else {
+            // Rol desconocido, retornar lista vacía
+            return List.of();
+        }
+    }
+
+    private List<Classroom> getClassroomsForTeacher(String username) throws Exception {
+        // Buscar el usuario por username
+        var userOpt = userService.findByUsernameOrPersonEmail(username);
+        if (userOpt.isEmpty()) {
+            return List.of();
+        }
+
+        // Buscar el teacher asociado al usuario
+        var teacherOpt = teacherService.findByPersonIdUser(userOpt.get().getIdUser());
+        if (teacherOpt.isEmpty()) {
+            return List.of();
+        }
+
+        // Buscar classrooms del teacher
+        return service.findByTeacherId(teacherOpt.get().getIdTeacher());
+    }
+
+    private List<Classroom> getClassroomsForStudent(String username) throws Exception {
+        // Buscar el usuario por username
+        var userOpt = userService.findByUsernameOrPersonEmail(username);
+        if (userOpt.isEmpty()) {
+            return List.of();
+        }
+
+        // Buscar el student asociado al usuario
+        var studentOpt = studentService.findByPersonIdUser(userOpt.get().getIdUser());
+        if (studentOpt.isEmpty()) {
+            return List.of();
+        }
+
+        // Buscar enrollments del student y obtener sus classrooms
+        var enrollments = enrollmentService.findByStudentId(studentOpt.get().getIdStudent());
+        return enrollments.stream()
+                .map(enrollment -> enrollment.getClassroom())
+                .toList();
+    }
+
+    private int compareClassrooms(ClassroomDTO c1, ClassroomDTO c2, String sortField) {
+        switch (sortField) {
+            case "name":
+                return c1.getName().compareTo(c2.getName());
+            case "idClassroom":
+            default:
+                return c1.getIdClassroom().compareTo(c2.getIdClassroom());
+        }
     }
 }

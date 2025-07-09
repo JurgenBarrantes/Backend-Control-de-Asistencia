@@ -1,5 +1,7 @@
 package com.systems.service.impl;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ClassroomService extends GenericService<Classroom, Integer> implements IClassroomService {
-    
+
     private final IClassroomRepo repo;
 
     @Override
@@ -25,5 +27,10 @@ public class ClassroomService extends GenericService<Classroom, Integer> impleme
     @Override
     public Page<Classroom> findAllWithTeacherAndSubject(Pageable pageable) {
         return repo.findAllWithTeacherAndSubject(pageable);
+    }
+
+    @Override
+    public List<Classroom> findByTeacherId(Integer teacherId) {
+        return repo.findByTeacherId(teacherId);
     }
 }

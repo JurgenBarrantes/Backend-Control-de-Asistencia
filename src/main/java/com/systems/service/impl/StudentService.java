@@ -1,5 +1,7 @@
 package com.systems.service.impl;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 import com.systems.model.Student;
 import com.systems.repo.IGenericRepo;
@@ -15,5 +17,10 @@ public class StudentService extends GenericService<Student, Integer> implements 
     @Override
     protected IGenericRepo<Student, Integer> getRepo() {
         return repo;
+    }
+
+    @Override
+    public Optional<Student> findByPersonIdUser(Integer userId) {
+        return repo.findByPersonIdUser(userId);
     }
 }

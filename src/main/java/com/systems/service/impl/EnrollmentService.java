@@ -1,5 +1,7 @@
 package com.systems.service.impl;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,5 +27,10 @@ public class EnrollmentService extends GenericService<Enrollment, Integer> imple
     @Override
     public Page<Enrollment> findAllWithStudentAndClassroom(Pageable pageable) {
         return repo.findAllWithStudentAndClassroom(pageable);
+    }
+
+    @Override
+    public List<Enrollment> findByStudentId(Integer studentId) {
+        return repo.findByStudentId(studentId);
     }
 }
