@@ -1,6 +1,5 @@
 package com.systems.security;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,11 +25,11 @@ public class JwtUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
         // Buscar por username o email
         Optional<User> userOpt = repo.findByUsernameOrPersonEmail(usernameOrEmail);
-        
-        if(userOpt.isEmpty()) {
+
+        if (userOpt.isEmpty()) {
             throw new UsernameNotFoundException("Usuario no encontrado con username o email: " + usernameOrEmail);
         }
-        
+
         User user = userOpt.get();
 
         List<GrantedAuthority> roles = new ArrayList<>();

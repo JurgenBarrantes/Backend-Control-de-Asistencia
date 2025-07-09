@@ -30,9 +30,6 @@ import com.systems.model.Teacher;
 import com.systems.service.IPersonService;
 import com.systems.service.ITeacherService;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @RestController

@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.systems.dto.CustomPageResponse;
-import com.systems.dto.TardinessRuleDTO;
 import com.systems.model.TardinessRule;
 import com.systems.service.ITardinessRuleService;
 

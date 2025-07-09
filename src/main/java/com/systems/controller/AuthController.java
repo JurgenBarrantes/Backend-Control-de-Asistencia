@@ -113,7 +113,7 @@ public class AuthController {
             }
 
             // 2. Buscar rol ANTES de crear cualquier entidad
-            String roleName = registerRequest.getRoleName() != null ? registerRequest.getRoleName() : "USER";
+            String roleName = registerRequest.getRoleName() != null ? registerRequest.getRoleName() : "STUDENT";
             Optional<Role> roleOpt = roleService.findByName(roleName);
 
             if (roleOpt.isEmpty()) {
