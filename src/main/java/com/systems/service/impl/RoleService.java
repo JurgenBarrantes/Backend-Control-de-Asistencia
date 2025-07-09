@@ -1,5 +1,7 @@
 package com.systems.service.impl;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import com.systems.model.Role;
@@ -18,5 +20,10 @@ public class RoleService extends GenericService<Role, Integer> implements IRoleS
     @Override
     protected IGenericRepo<Role, Integer> getRepo() {
         return repo;
+    }
+
+    @Override
+    public Optional<Role> findByName(String name) {
+        return repo.findByName(name);
     }
 }

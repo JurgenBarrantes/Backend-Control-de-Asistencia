@@ -22,6 +22,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "schedules")
 public class Schedule { // para definir los horarios de las clases
     @Id
+    // TEMPORAL: @GeneratedValue comentado hasta que se configure AUTO_INCREMENT en la DB
+    // @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
     private Integer idSchedule;
 
@@ -35,7 +37,7 @@ public class Schedule { // para definir los horarios de las clases
     private LocalTime endTime;
 
     @ManyToOne
-    @JoinColumn(name = "id_classroom", nullable = false)
+    @JoinColumn(name = "id_classroom", nullable = true) // TEMPORAL: permitir null para facilitar pruebas
     private Classroom classroom;
 
     

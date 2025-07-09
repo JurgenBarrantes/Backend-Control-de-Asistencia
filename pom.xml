@@ -73,13 +73,12 @@
 			<version>42.7.3</version>
 		</dependency>
 		
-		<!-- seguridad 
+		<!-- seguridad -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		 JWT Tokens  
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -99,7 +98,7 @@
 			<version>0.12.5</version>
 			<scope>runtime</scope>
 		</dependency>
-		seguridad hasta acá-->
+		<!-- seguridad hasta acá-->
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>

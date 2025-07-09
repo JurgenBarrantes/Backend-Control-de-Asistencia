@@ -111,15 +111,22 @@ public class AttendanceService extends GenericService<Attendance, Integer> imple
         Attendance attendance = new Attendance();
         attendance.setIdAttendance(dto.getIdAttendance());
 
-        // Convertir fecha string a LocalDate
-        if (dto.getDate() != null) {
+        // Convertir fecha string a LocalDate - siempre asegurar que tenga un valor
+        if (dto.getDate() != null && !dto.getDate().trim().isEmpty()) {
             attendance.setDate(java.time.LocalDate.parse(dto.getDate()));
+        } else {
+            // Si no se proporciona fecha, usar la fecha actual
+            attendance.setDate(java.time.LocalDate.now());
         }
 
         // Convertir hora string a LocalDate (nota: en el modelo está como LocalDate,
-        // debería ser LocalTime)
-        if (dto.getEntryTime() != null) {
-            attendance.setEntryTime(java.time.LocalDate.parse(dto.getEntryTime()));
+        // debería ser LocalTime) - siempre asegurar que tenga un valor
+        if (dto.getEntryTime() != null && !dto.getEntryTime().trim().isEmpty()) {
+            // Para mantener consistencia, usar la misma fecha que date
+            attendance.setEntryTime(attendance.getDate());
+        } else {
+            // Si no hay entryTime, usar la misma fecha que date
+            attendance.setEntryTime(attendance.getDate());
         }
 
         attendance.setPresent(dto.isPresent());
