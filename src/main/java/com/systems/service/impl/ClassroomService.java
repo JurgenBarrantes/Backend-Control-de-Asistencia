@@ -1,5 +1,7 @@
 package com.systems.service.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.systems.model.Classroom;
@@ -18,5 +20,10 @@ public class ClassroomService extends GenericService<Classroom, Integer> impleme
     @Override
     protected IGenericRepo<Classroom, Integer> getRepo() {
         return repo;
+    }
+
+    @Override
+    public Page<Classroom> findAllWithTeacherAndSubject(Pageable pageable) {
+        return repo.findAllWithTeacherAndSubject(pageable);
     }
 }

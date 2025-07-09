@@ -17,4 +17,9 @@ public class TeacherDTO {
     private String dni;
     private String email;
     private String phone;
+    
+    // Campos adicionales requeridos por Person
+    private String birthdate; // Formato: "YYYY-MM-DD"
+    private String gender;    // "M" o "F"
+    private String address;
 }

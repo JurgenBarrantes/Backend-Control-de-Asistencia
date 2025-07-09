@@ -3,8 +3,10 @@ package com.systems.controller;
 import java.net.URI;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +22,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.systems.dto.ClassroomDTO;
 import com.systems.dto.ScheduleDTO;
+import com.systems.model.Classroom;
 import com.systems.model.Schedule;
 import com.systems.service.IScheduleService;
 
@@ -31,19 +35,18 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequestMapping("/schedules")
 @RequiredArgsConstructor
-//@CrossOrigin(origins = "*")
-public class ScheduleController { //es para manejar las solicitudes relacionadas con los horarios
-    private final IScheduleService service;
-	private final ModelMapper modelMapper;
+// @CrossOrigin(origins = "*")
+public class ScheduleController { // es para manejar las solicitudes relacionadas con los horarios
+	private final IScheduleService service;
 
-	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
+	// @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
 	public ResponseEntity<?> findAll(
 			@RequestParam(required = false) Integer page,
 			@RequestParam(required = false) Integer size,
 			@RequestParam(required = false) String sortBy,
 			@RequestParam(required = false) String sortDirection) throws Exception {
-		
+
 		// Si se proporcionan parámetros de paginación, usar paginación
 		if (page != null || size != null) {
 			int pageNumber = page != null ? page : 0;
@@ -51,7 +54,14 @@ public class ScheduleController { //es para manejar las solicitudes relacionadas
 			String sortField = sortBy != null ? sortBy : "idSchedule";
 			String sortDir = sortDirection != null ? sortDirection : "asc";
 			
-			Page<Schedule> entityPage = service.findAllPaginated(pageNumber, pageSize, sortField, sortDir);
+			// Crear Pageable con sorting
+			Sort sort = sortDir.equalsIgnoreCase("desc") ? 
+				Sort.by(sortField).descending() : 
+				Sort.by(sortField).ascending();
+			Pageable pageable = PageRequest.of(pageNumber, pageSize, sort);
+			
+			// Usar el método que hace fetch join de classroom
+			Page<Schedule> entityPage = service.findAllWithClassroom(pageable);
 			Page<ScheduleDTO> dtoPage = entityPage.map(this::convertToDto);
 			return ResponseEntity.ok(dtoPage);
 		} else {
@@ -71,12 +81,39 @@ public class ScheduleController { //es para manejar las solicitudes relacionadas
 
 	@PostMapping
 	public ResponseEntity<Void> save(@RequestBody ScheduleDTO dto) throws Exception {
+		// TEMPORAL: Generar ID manualmente hasta que se configure AUTO_INCREMENT en la
+		// DB
+		if (dto.getIdSchedule() == null) {
+			Integer nextId = getNextScheduleId();
+			dto.setIdSchedule(nextId);
+		}
+
 		Schedule obj = service.save(convertToEntity(dto));
 		URI location = ServletUriComponentsBuilder
 				.fromCurrentRequest()
 				.path("/{id}")
 				.buildAndExpand(obj.getIdSchedule()).toUri();
 		return ResponseEntity.created(location).build();
+	}
+
+	// TEMPORAL: Método para generar ID manualmente hasta que se configure
+	// AUTO_INCREMENT
+	private Integer getNextScheduleId() {
+		try {
+			List<Schedule> allSchedules = service.findAll();
+			if (allSchedules.isEmpty()) {
+				return 1;
+			}
+			// Obtener el ID máximo y sumar 1
+			Integer maxId = allSchedules.stream()
+					.mapToInt(Schedule::getIdSchedule)
+					.max()
+					.orElse(0);
+			return maxId + 1;
+		} catch (Exception e) {
+			// Si hay error, empezar desde 1
+			return 1;
+		}
 	}
 
 	@PutMapping("/{id}")
@@ -103,7 +140,6 @@ public class ScheduleController { //es para manejar las solicitudes relacionadas
 		Schedule obj = service.findById(id);
 		EntityModel<ScheduleDTO> resource = EntityModel.of(convertToDto(obj));
 
-
 		WebMvcLinkBuilder link1 = linkTo(methodOn(this.getClass()).findById(id));
 		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll(null, null, null, null));
 		resource.add(link1.withRel("schedule-self-info"));
@@ -111,12 +147,74 @@ public class ScheduleController { //es para manejar las solicitudes relacionadas
 
 		return resource;
 	}
-
 	private ScheduleDTO convertToDto(Schedule obj) {
-		return modelMapper.map(obj, ScheduleDTO.class);
+		ScheduleDTO dto = new ScheduleDTO();
+		dto.setIdSchedule(obj.getIdSchedule());
+		dto.setDayOfWeek(obj.getDayOfWeek() != null ? obj.getDayOfWeek().toString() : null);
+		dto.setStartTime(obj.getStartTime() != null ? obj.getStartTime().toString() : null);
+		dto.setEndTime(obj.getEndTime() != null ? obj.getEndTime().toString() : null);
+		
+		// Convertir classroom si existe - versión básica sin referencias circulares
+		if (obj.getClassroom() != null) {
+			ClassroomDTO classroomDTO = new ClassroomDTO();
+			classroomDTO.setIdClassroom(obj.getClassroom().getIdClassroom());
+			classroomDTO.setName(obj.getClassroom().getName());
+			// Los demás campos quedan como null y no se serializarán por @JsonInclude(NON_NULL)
+			dto.setClassroom(classroomDTO);
+		}
+		
+		// Subject está comentado en el entity, no establecer nada (quedará null y no se serializará)
+		
+		return dto;
 	}
 
 	private Schedule convertToEntity(ScheduleDTO dto) {
-		return modelMapper.map(dto, Schedule.class);
+		// Validar campos obligatorios
+		if (dto.getDayOfWeek() == null || dto.getDayOfWeek().trim().isEmpty()) {
+			throw new IllegalArgumentException("El día de la semana es obligatorio");
+		}
+		if (dto.getStartTime() == null || dto.getStartTime().trim().isEmpty()) {
+			throw new IllegalArgumentException("La hora de inicio es obligatoria");
+		}
+		if (dto.getEndTime() == null || dto.getEndTime().trim().isEmpty()) {
+			throw new IllegalArgumentException("La hora de fin es obligatoria");
+		}
+
+		Schedule schedule = new Schedule();
+
+		// Siempre establecer el ID (será generado en POST o vendrá del path en PUT)
+		schedule.setIdSchedule(dto.getIdSchedule());
+
+		try {
+			schedule.setDayOfWeek(java.time.DayOfWeek.valueOf(dto.getDayOfWeek().toUpperCase()));
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("Día de la semana inválido: " + dto.getDayOfWeek());
+		}
+
+		try {
+			schedule.setStartTime(java.time.LocalTime.parse(dto.getStartTime()));
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Formato de hora de inicio inválido: " + dto.getStartTime());
+		}
+
+		try {
+			schedule.setEndTime(java.time.LocalTime.parse(dto.getEndTime()));
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Formato de hora de fin inválido: " + dto.getEndTime());
+		}
+
+		// Manejar classroom - TEMPORAL: usar ID 1 como default cuando no se proporciona
+		if (dto.getClassroom() != null && dto.getClassroom().getIdClassroom() != null) {
+			Classroom classroom = new Classroom();
+			classroom.setIdClassroom(dto.getClassroom().getIdClassroom());
+			schedule.setClassroom(classroom);
+		} else {
+			// TEMPORAL: Usar classroom con ID 1 como default (debe existir en la DB)
+			Classroom defaultClassroom = new Classroom();
+			defaultClassroom.setIdClassroom(1);
+			schedule.setClassroom(defaultClassroom);
+		}
+
+		return schedule;
 	}
 }

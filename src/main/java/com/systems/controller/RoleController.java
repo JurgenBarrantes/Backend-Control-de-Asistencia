@@ -3,7 +3,6 @@ package com.systems.controller;
 import java.net.URI;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
@@ -32,7 +31,6 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequiredArgsConstructor
 public class RoleController {
     private final IRoleService service;
-    private final ModelMapper modelMapper;
 
     @GetMapping
     public ResponseEntity<?> findAll(
@@ -66,13 +64,40 @@ public class RoleController {
 
     @PostMapping
     public ResponseEntity<Void> save(@RequestBody RoleDTO dto) throws Exception {
-        Role obj = service.save(convertToEntity(dto));
+        // TEMPORAL: Generar ID manualmente hasta que se configure AUTO_INCREMENT en la DB
+        if (dto.getIdRole() == null) {
+            Integer nextId = getNextRoleId();
+            dto.setIdRole(nextId);
+        }
+        
+        // Crear la entidad
+        Role entity = convertToEntity(dto);
+        Role obj = service.save(entity);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(obj.getIdRole()).toUri();
         return ResponseEntity.created(location).build();
+    }
+    
+    // TEMPORAL: Método para generar ID manualmente hasta que se configure AUTO_INCREMENT
+    private Integer getNextRoleId() {
+        try {
+            List<Role> allRoles = service.findAll();
+            if (allRoles.isEmpty()) {
+                return 1;
+            }
+            // Obtener el ID máximo y sumar 1
+            Integer maxId = allRoles.stream()
+                    .mapToInt(Role::getIdRole)
+                    .max()
+                    .orElse(0);
+            return maxId + 1;
+        } catch (Exception e) {
+            // Si hay error, empezar desde 1
+            return 1;
+        }
     }
 
     @PutMapping("/{id}")
@@ -104,10 +129,32 @@ public class RoleController {
     }
 
     private RoleDTO convertToDto(Role obj) {
-        return modelMapper.map(obj, RoleDTO.class);
+        RoleDTO dto = new RoleDTO();
+        dto.setIdRole(obj.getIdRole());
+        dto.setName(obj.getName());
+        dto.setDescription(obj.getDescription());
+        return dto;
     }
 
     private Role convertToEntity(RoleDTO dto) {
-        return modelMapper.map(dto, Role.class);
+        // Validar campos obligatorios
+        if (dto.getName() == null || dto.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del rol es obligatorio");
+        }
+        if (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("La descripción del rol es obligatoria");
+        }
+        
+        Role role = new Role();
+        
+        // Solo establecer el ID si no es null (para operaciones PUT)
+        // Para POST, el ID será null y Hibernate lo generará automáticamente
+        if (dto.getIdRole() != null) {
+            role.setIdRole(dto.getIdRole());
+        }
+        role.setName(dto.getName().trim());
+        role.setDescription(dto.getDescription().trim());
+        
+        return role;
     }
 }

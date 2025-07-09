@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -43,4 +44,7 @@ public class User { //Usuarios del sistema como profesores, administradores, etc
                 joinColumns = @JoinColumn(name = "id_user", referencedColumnName = "idUser"),
                 inverseJoinColumns = @JoinColumn(name = "id_role", referencedColumnName = "idRole"))
     private List<Role> roles; // Relación con la entidad Role, que representa el rol del usuario en el sistema
+    
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private Person person; // Relación inversa con Person
 }

@@ -16,4 +16,6 @@ public class PersonDTO {
     private String gender;
     private String address;
     private String phone;
+    private String email;
+    private Integer userId; // ID del usuario asociado (opcional)
 }

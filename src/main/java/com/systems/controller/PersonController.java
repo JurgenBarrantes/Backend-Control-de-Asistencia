@@ -3,7 +3,6 @@ package com.systems.controller;
 import java.net.URI;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
@@ -22,6 +21,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.systems.dto.PersonDTO;
 import com.systems.model.Person;
+import com.systems.model.User;
 import com.systems.service.IPersonService;
 
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,6 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 //@CrossOrigin(origins = "*")
 public class PersonController { //es para manejar las solicitudes relacionadas con las personas (estudiantes, profesores, etc.)
     private final IPersonService service;
-	private final ModelMapper modelMapper;
 
 
 	
@@ -94,7 +93,8 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 
 	@PostMapping
 	public ResponseEntity<Void> save(@RequestBody PersonDTO dto) throws Exception {
-		Person obj = service.save(convertToEntity(dto));
+		Person entity = convertToEntity(dto);
+		Person obj = service.save(entity);
 		// return ResponseEntity.ok(obj);
 
 		// location: http://localhost:9091/persons/{id}
@@ -140,10 +140,68 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 	}
 
 	private PersonDTO convertToDto(Person obj) {
-		return modelMapper.map(obj, PersonDTO.class);
+		PersonDTO dto = new PersonDTO();
+		dto.setIdPerson(obj.getIdPerson());
+		dto.setDni(obj.getDni());
+		dto.setFirstName(obj.getFirstName());
+		dto.setLastName(obj.getLastName());
+		
+		// Convertir LocalDate a String
+		if (obj.getBirthdate() != null) {
+			dto.setBirthdate(obj.getBirthdate().toString());
+		}
+		
+		dto.setGender(obj.getGender());
+		dto.setAddress(obj.getAddress());
+		dto.setPhone(obj.getPhone());
+		dto.setEmail(obj.getEmail());
+		
+		// Mapear ID del usuario si existe
+		if (obj.getUser() != null) {
+			dto.setUserId(obj.getUser().getIdUser());
+		}
+		
+		return dto;
 	}
 
 	private Person convertToEntity(PersonDTO dto) {
-		return modelMapper.map(dto, Person.class);
+		Person person = new Person();
+		person.setIdPerson(dto.getIdPerson());
+		person.setDni(dto.getDni());
+		person.setFirstName(dto.getFirstName());
+		person.setLastName(dto.getLastName());
+		
+		// Convertir String a LocalDate - siempre asegurar que tenga un valor
+		if (dto.getBirthdate() != null && !dto.getBirthdate().trim().isEmpty()) {
+			try {
+				person.setBirthdate(java.time.LocalDate.parse(dto.getBirthdate()));
+			} catch (Exception e) {
+				throw new IllegalArgumentException("Formato de fecha inválido. Use YYYY-MM-DD");
+			}
+		} else {
+			// Si no se proporciona fecha de nacimiento, usar fecha actual como fallback
+			person.setBirthdate(java.time.LocalDate.now());
+		}
+		
+		person.setGender(dto.getGender());
+		person.setAddress(dto.getAddress());
+		person.setPhone(dto.getPhone());
+		
+		// Manejar email - campo obligatorio
+		if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+			person.setEmail(dto.getEmail());
+		} else {
+			// Generar email por defecto si no se proporciona
+			person.setEmail(dto.getDni() + "@default.com");
+		}
+		
+		// Manejar relación con User - opcional
+		if (dto.getUserId() != null) {
+			User user = new User();
+			user.setIdUser(dto.getUserId());
+			person.setUser(user);
+		}
+		
+		return person;
 	}
 }

@@ -123,7 +123,8 @@ public class AssistController {
         
         if (obj.getEnrollment() != null) {
             dto.setEnrollmentId(obj.getEnrollment().getIdEnrollment());
-            // Información adicional del enrollment
+            
+            // Información adicional del enrollment - estudiante
             if (obj.getEnrollment().getStudent() != null) {
                 dto.setStudentId(obj.getEnrollment().getStudent().getIdStudent());
                 if (obj.getEnrollment().getStudent().getPerson() != null) {
@@ -131,6 +132,12 @@ public class AssistController {
                     dto.setStudentLastName(obj.getEnrollment().getStudent().getPerson().getLastName());
                     dto.setStudentFullName(obj.getEnrollment().getStudent().getPerson().getFirstName() + " " + obj.getEnrollment().getStudent().getPerson().getLastName());
                 }
+            }
+            
+            // Información adicional del enrollment - aula/classroom
+            if (obj.getEnrollment().getClassroom() != null) {
+                dto.setClassroomId(obj.getEnrollment().getClassroom().getIdClassroom());
+                dto.setClassroomName(obj.getEnrollment().getClassroom().getName());
             }
         }
         
