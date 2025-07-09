@@ -1,5 +1,6 @@
 package com.systems.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,6 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class PersonDTO {
     private Integer idPerson;
     private String dni;
@@ -17,5 +19,5 @@ public class PersonDTO {
     private String address;
     private String phone;
     private String email;
-    private Integer userId; // ID del usuario asociado (opcional)
+    private UserDTO user; // Objeto User completo en lugar de solo el ID
 }

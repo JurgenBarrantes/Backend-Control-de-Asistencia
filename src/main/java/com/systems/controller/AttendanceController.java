@@ -89,9 +89,6 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 	@PutMapping("/{id}")
 	public ResponseEntity<AttendanceDTO> update(@PathVariable("id") Integer id, @RequestBody AttendanceDTO dto)
 			throws Exception {
-		// Publisher obj = service.update(modelMapper.map(dto,Publisher.class), id);
-		// PublisherDTO dto1 = modelMapper.map(obj, PublisherDTO.class);
-		// return ResponseEntity.ok(dto1);
 		dto.setIdAttendance(id);
 		Attendance obj = service.update(convertToEntity(dto), id);
 		AttendanceDTO dto1 = convertToDto(obj);
@@ -110,8 +107,6 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 		Attendance obj = service.findById(id);
 		EntityModel<AttendanceDTO> resource = EntityModel.of(convertToDto(obj));
 
-		// Generar links informativos
-		// localhost:9091/attendances/5
 		WebMvcLinkBuilder link1 = linkTo(methodOn(this.getClass()).findById(id));
 		WebMvcLinkBuilder link2 = linkTo(methodOn(this.getClass()).findAll(null, null, null, null));
 		resource.add(link1.withRel("attendance-self-info"));
@@ -120,7 +115,6 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 		return resource;
 	}
 
-	// esto es para manejar la asistencia de una clase en bloque
 	@PostMapping("/bulk-class")
 	public ResponseEntity<ClassAttendanceResponseDTO> saveClassAttendance(
 			@RequestBody ClassAttendanceDTO classAttendanceDto)
@@ -133,7 +127,6 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 		AttendanceDTO dto = new AttendanceDTO();
 		dto.setIdAttendance(obj.getIdAttendance());
 
-		// Convertir fecha y hora a strings
 		if (obj.getDate() != null) {
 			dto.setDate(obj.getDate().toString());
 		}
@@ -144,17 +137,16 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 		dto.setPresent(obj.isPresent());
 		dto.setLate(obj.isLate());
 
-		// Convertir objetos completos para las relaciones
 		if (obj.getClassroom() != null) {
 			dto.setClassroomId(obj.getClassroom().getIdClassroom());
 			dto.setClassroom(convertClassroomToDto(obj.getClassroom()));
 		}
-		
+
 		if (obj.getSchedule() != null) {
 			dto.setScheduleId(obj.getSchedule().getIdSchedule());
 			dto.setSchedule(convertScheduleToSimpleDto(obj.getSchedule()));
 		}
-		
+
 		if (obj.getStudent() != null) {
 			dto.setStudentId(obj.getStudent().getIdStudent());
 			dto.setStudent(convertStudentToDto(obj.getStudent()));
@@ -167,30 +159,21 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 		Attendance attendance = new Attendance();
 		attendance.setIdAttendance(dto.getIdAttendance());
 
-		// Convertir strings a LocalDate - siempre asegurar que tenga un valor
 		if (dto.getDate() != null && !dto.getDate().trim().isEmpty()) {
 			attendance.setDate(java.time.LocalDate.parse(dto.getDate()));
 		} else {
-			// Si no se proporciona fecha, usar la fecha actual
 			attendance.setDate(java.time.LocalDate.now());
 		}
 
-		// Convertir string a LocalDate (nota: el modelo tiene un error, debería ser
-		// LocalTime)
 		if (dto.getEntryTime() != null && !dto.getEntryTime().trim().isEmpty()) {
-			// Como el modelo usa LocalDate para entryTime, necesitamos usar la fecha actual
-			// con la hora
-			// Para compatibilidad, usamos la misma fecha que 'date'
-			attendance.setEntryTime(attendance.getDate()); // Usar la fecha ya establecida
+			attendance.setEntryTime(attendance.getDate());
 		} else {
-			// Si no hay entryTime, usar la misma fecha que date
 			attendance.setEntryTime(attendance.getDate());
 		}
 
 		attendance.setPresent(dto.isPresent());
 		attendance.setLate(dto.isLate());
 
-		// Crear objetos de relaciones con solo el ID
 		if (dto.getClassroomId() != null) {
 			Classroom classroom = new Classroom();
 			classroom.setIdClassroom(dto.getClassroomId());
@@ -224,12 +207,14 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 			teacherDTO.setIdTeacher(classroom.getTeacher().getIdTeacher());
 			teacherDTO.setFirstName(classroom.getTeacher().getPerson().getFirstName());
 			teacherDTO.setLastName(classroom.getTeacher().getPerson().getLastName());
-			teacherDTO.setFullName(classroom.getTeacher().getPerson().getFirstName() + " " + classroom.getTeacher().getPerson().getLastName());
+			teacherDTO.setFullName(classroom.getTeacher().getPerson().getFirstName() + " "
+					+ classroom.getTeacher().getPerson().getLastName());
 			teacherDTO.setDni(classroom.getTeacher().getPerson().getDni());
 			teacherDTO.setEmail(classroom.getTeacher().getPerson().getEmail());
 			teacherDTO.setPhone(classroom.getTeacher().getPerson().getPhone());
-			teacherDTO.setBirthdate(classroom.getTeacher().getPerson().getBirthdate() != null ? 
-				classroom.getTeacher().getPerson().getBirthdate().toString() : null);
+			teacherDTO.setBirthdate(classroom.getTeacher().getPerson().getBirthdate() != null
+					? classroom.getTeacher().getPerson().getBirthdate().toString()
+					: null);
 			teacherDTO.setGender(classroom.getTeacher().getPerson().getGender());
 			teacherDTO.setAddress(classroom.getTeacher().getPerson().getAddress());
 			dto.setTeacher(teacherDTO);
@@ -258,7 +243,7 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 	private StudentDTO convertStudentToDto(Student student) {
 		StudentDTO dto = new StudentDTO();
 		dto.setIdStudent(student.getIdStudent());
-		
+
 		if (student.getPerson() != null) {
 			dto.setFirstName(student.getPerson().getFirstName());
 			dto.setLastName(student.getPerson().getLastName());
@@ -266,12 +251,12 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 			dto.setDni(student.getPerson().getDni());
 			dto.setEmail(student.getPerson().getEmail());
 			dto.setPhone(student.getPerson().getPhone());
-			dto.setBirthdate(student.getPerson().getBirthdate() != null ? 
-				student.getPerson().getBirthdate().toString() : null);
+			dto.setBirthdate(
+					student.getPerson().getBirthdate() != null ? student.getPerson().getBirthdate().toString() : null);
 			dto.setGender(student.getPerson().getGender());
 			dto.setAddress(student.getPerson().getAddress());
 		}
-		
+
 		return dto;
 	}
 }

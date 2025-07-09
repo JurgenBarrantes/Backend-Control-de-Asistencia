@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.systems.dto.PersonDTO;
+import com.systems.dto.UserDTO;
+import com.systems.dto.RoleDTO;
 import com.systems.model.Person;
 import com.systems.model.User;
 import com.systems.service.IPersonService;
@@ -29,17 +31,15 @@ import lombok.RequiredArgsConstructor;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
-
 @RestController
 @RequestMapping("/persons")
 @RequiredArgsConstructor
-//@CrossOrigin(origins = "*")
-public class PersonController { //es para manejar las solicitudes relacionadas con las personas (estudiantes, profesores, etc.)
-    private final IPersonService service;
+// @CrossOrigin(origins = "*")
+public class PersonController { // es para manejar las solicitudes relacionadas con las personas (estudiantes,
+								// profesores, etc.)
+	private final IPersonService service;
 
-
-	
-	//@PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
+	// @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
 	public ResponseEntity<?> findAll(
 			@RequestParam(value = "search", required = false) String search,
@@ -47,24 +47,29 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 			@RequestParam(required = false) Integer size,
 			@RequestParam(required = false) String sortBy,
 			@RequestParam(required = false) String sortDirection) throws Exception {
-		
+
 		// Si se proporcionan parámetros de paginación, usar paginación
 		if (page != null || size != null) {
 			int pageNumber = page != null ? page : 0;
 			int pageSize = size != null ? size : 10;
 			String sortField = sortBy != null ? sortBy : "idPerson";
 			String sortDir = sortDirection != null ? sortDirection : "asc";
-			
-			// Para paginación, usar solo el servicio general (filtrado se haría en el frontend)
-			Page<Person> entityPage = service.findAllPaginated(pageNumber, pageSize, sortField, sortDir);
+
+			// Para paginación, usar el método que carga User
+			Page<Person> entityPage = service.findAllWithUser(
+					org.springframework.data.domain.PageRequest.of(pageNumber, pageSize,
+							sortDir.equalsIgnoreCase("desc")
+									? org.springframework.data.domain.Sort.by(sortField).descending()
+									: org.springframework.data.domain.Sort.by(sortField).ascending()));
 			Page<PersonDTO> dtoPage = entityPage.map(this::convertToDto);
 			System.out.println("=== PAGINATED PERSONS ===");
-			System.out.println("Found " + dtoPage.getTotalElements() + " total elements, page " + pageNumber + " of " + dtoPage.getTotalPages());
+			System.out.println("Found " + dtoPage.getTotalElements() + " total elements, page " + pageNumber + " of "
+					+ dtoPage.getTotalPages());
 			return ResponseEntity.ok(dtoPage);
 		} else {
 			// Sin paginación, devolver lista completa con filtrado
 			List<PersonDTO> list;
-			
+
 			if ("teachers".equalsIgnoreCase(search)) {
 				list = service.findPersonsWhoAreTeachers().stream().map(this::convertToDto).toList();
 				System.out.println("=== FILTERING TEACHERS ===");
@@ -74,11 +79,11 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 				System.out.println("=== FILTERING STUDENTS ===");
 				System.out.println("Found " + list.size() + " students");
 			} else {
-				list = service.findAll().stream().map(this::convertToDto).toList();
+				list = service.findAllWithUser().stream().map(this::convertToDto).toList();
 				System.out.println("=== NO FILTER - ALL PERSONS ===");
 				System.out.println("Found " + list.size() + " persons");
 			}
-			
+
 			return ResponseEntity.ok(list);
 		}
 	}
@@ -145,22 +150,40 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 		dto.setDni(obj.getDni());
 		dto.setFirstName(obj.getFirstName());
 		dto.setLastName(obj.getLastName());
-		
+
 		// Convertir LocalDate a String
 		if (obj.getBirthdate() != null) {
 			dto.setBirthdate(obj.getBirthdate().toString());
 		}
-		
+
 		dto.setGender(obj.getGender());
 		dto.setAddress(obj.getAddress());
 		dto.setPhone(obj.getPhone());
 		dto.setEmail(obj.getEmail());
-		
-		// Mapear ID del usuario si existe
+
+		// Convertir User completo si existe
 		if (obj.getUser() != null) {
-			dto.setUserId(obj.getUser().getIdUser());
+			UserDTO userDto = new UserDTO();
+			userDto.setIdUser(obj.getUser().getIdUser());
+			userDto.setUsername(obj.getUser().getUsername());
+			// No incluir password por seguridad
+			userDto.setEnabled(obj.getUser().getEnabled());
+
+			// Convertir roles si existen
+			if (obj.getUser().getRoles() != null && !obj.getUser().getRoles().isEmpty()) {
+				List<RoleDTO> rolesDto = obj.getUser().getRoles().stream()
+						.map(role -> {
+							RoleDTO roleDto = new RoleDTO();
+							roleDto.setIdRole(role.getIdRole());
+							roleDto.setName(role.getName());
+							return roleDto;
+						}).toList();
+				userDto.setRoles(rolesDto);
+			}
+
+			dto.setUser(userDto);
 		}
-		
+
 		return dto;
 	}
 
@@ -170,7 +193,7 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 		person.setDni(dto.getDni());
 		person.setFirstName(dto.getFirstName());
 		person.setLastName(dto.getLastName());
-		
+
 		// Convertir String a LocalDate - siempre asegurar que tenga un valor
 		if (dto.getBirthdate() != null && !dto.getBirthdate().trim().isEmpty()) {
 			try {
@@ -182,11 +205,11 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 			// Si no se proporciona fecha de nacimiento, usar fecha actual como fallback
 			person.setBirthdate(java.time.LocalDate.now());
 		}
-		
+
 		person.setGender(dto.getGender());
 		person.setAddress(dto.getAddress());
 		person.setPhone(dto.getPhone());
-		
+
 		// Manejar email - campo obligatorio
 		if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
 			person.setEmail(dto.getEmail());
@@ -194,14 +217,14 @@ public class PersonController { //es para manejar las solicitudes relacionadas c
 			// Generar email por defecto si no se proporciona
 			person.setEmail(dto.getDni() + "@default.com");
 		}
-		
+
 		// Manejar relación con User - opcional
-		if (dto.getUserId() != null) {
+		if (dto.getUser() != null && dto.getUser().getIdUser() != null) {
 			User user = new User();
-			user.setIdUser(dto.getUserId());
+			user.setIdUser(dto.getUser().getIdUser());
 			person.setUser(user);
 		}
-		
+
 		return person;
 	}
 }

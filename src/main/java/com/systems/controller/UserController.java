@@ -150,7 +150,8 @@ public class UserController { // es para manejar las solicitudes relacionadas co
 			personDTO.setAddress(obj.getPerson().getAddress());
 			personDTO.setPhone(obj.getPerson().getPhone());
 			personDTO.setEmail(obj.getPerson().getEmail());
-			personDTO.setUserId(obj.getIdUser());
+			// No establecer user aquí para evitar recursión infinita
+			personDTO.setUser(null);
 			dto.setPerson(personDTO);
 		} else {
 			dto.setPerson(null);

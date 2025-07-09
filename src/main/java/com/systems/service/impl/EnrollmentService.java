@@ -1,5 +1,7 @@
 package com.systems.service.impl;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.systems.model.Enrollment;
@@ -12,11 +14,16 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class EnrollmentService extends GenericService<Enrollment, Integer> implements IEnrollmentService {
-    
+
     private final IEnrollmentRepo repo;
 
     @Override
     protected IGenericRepo<Enrollment, Integer> getRepo() {
         return repo;
+    }
+
+    @Override
+    public Page<Enrollment> findAllWithStudentAndClassroom(Pageable pageable) {
+        return repo.findAllWithStudentAndClassroom(pageable);
     }
 }
