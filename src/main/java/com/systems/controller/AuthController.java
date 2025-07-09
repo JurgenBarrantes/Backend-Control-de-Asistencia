@@ -9,6 +9,9 @@ import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,15 +44,38 @@ public class AuthController {
     private final IUserService userService;
     private final IPersonService personService;
     private final IRoleService roleService;
+    private final PasswordEncoder passwordEncoder;
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenUtil jwtTokenUtil;
     private final JwtUserDetailsService jwtUserDetailsService;
-    
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            // Buscar usuario por username o email
+            // Autenticación usando Spring Security
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()));
+
+            // Cargar detalles del usuario
+            UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(loginRequest.getUsername());
+
+            // Generar token JWT
+            String accessToken = jwtTokenUtil.generateToken(userDetails);
+
+            // Para el refresh token, generamos otro token con mayor duración
+            String refreshToken = "refresh-" + jwtTokenUtil.generateToken(userDetails);
+
+            // Definir tiempos de expiración basados en la configuración JWT
+            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(5); // Según JWT_TOKEN_VALIDITY
+            LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días para refresh
+
+            // Crear objeto TokenInfo
+            TokenInfo tokenInfo = new TokenInfo(accessToken, refreshToken, accessTokenExpiry, refreshTokenExpiry);
+
+            // Buscar el usuario en la base de datos para los detalles completos
             Optional<User> userOpt = userService.findByUsernameOrPersonEmail(loginRequest.getUsername());
 
             if (userOpt.isEmpty()) {
@@ -59,23 +85,6 @@ public class AuthController {
 
             User user = userOpt.get();
 
-            // Por ahora verificación simple de password (sin encriptación)
-            if (!user.getPassword().equals(loginRequest.getPassword())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("Credenciales inválidas");
-            }
-
-            // Generar tokens simples (sin JWT por ahora)
-            String accessToken = "fake-access-token-" + user.getUsername();
-            String refreshToken = "fake-refresh-token-" + user.getUsername();
-
-            // Definir tiempos de expiración
-            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(1); // 1 hora
-            LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días
-
-            // Crear objeto TokenInfo
-            TokenInfo tokenInfo = new TokenInfo(accessToken, refreshToken, accessTokenExpiry, refreshTokenExpiry);
-
             // Convertir User a AuthUserDTO
             AuthUserDTO userDTO = convertUserToDto(user);
 
@@ -84,8 +93,8 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error interno del servidor: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Credenciales inválidas: " + e.getMessage());
         }
     }
 
@@ -115,7 +124,7 @@ public class AuthController {
             // 3. Crear User primero (sin la persona)
             User user = new User();
             user.setUsername(registerRequest.getUsername());
-            user.setPassword(registerRequest.getPassword()); // Sin encriptar por ahora
+            user.setPassword(passwordEncoder.encode(registerRequest.getPassword())); // Encriptar password
             user.setEnabled(true);
 
             List<Role> roles = new ArrayList<>();
@@ -142,12 +151,13 @@ public class AuthController {
             // Para la respuesta, necesitamos la relación en el objeto User
             savedUser.setPerson(savedPerson);
 
-            // 5. Generar tokens y responder
-            String accessToken = "fake-access-token-" + savedUser.getUsername();
-            String refreshToken = "fake-refresh-token-" + savedUser.getUsername();
+            // 5. Generar tokens JWT reales
+            UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(savedUser.getUsername());
+            String accessToken = jwtTokenUtil.generateToken(userDetails);
+            String refreshToken = "refresh-" + jwtTokenUtil.generateToken(userDetails);
 
             // Definir tiempos de expiración
-            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(1); // 1 hora
+            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(5); // Según JWT_TOKEN_VALIDITY
             LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días
 
             // Crear objeto TokenInfo
@@ -170,21 +180,33 @@ public class AuthController {
         try {
             String refreshToken = refreshRequest.getRefreshToken();
 
-            // Validación simple del refresh token
-            if (!refreshToken.startsWith("fake-refresh-token-")) {
+            // Validar que el refresh token sea válido
+            if (refreshToken == null || !refreshToken.startsWith("refresh-")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body("Refresh token inválido");
             }
 
-            // Extraer username del token
-            String username = refreshToken.replace("fake-refresh-token-", "");
+            // Extraer el token JWT real (sin el prefijo "refresh-")
+            String actualToken = refreshToken.substring(8); // Remove "refresh-"
 
-            // Generar nuevos tokens
-            String newAccessToken = "fake-access-token-" + username;
-            String newRefreshToken = "fake-refresh-token-" + username;
+            // Extraer username del token JWT
+            String username = jwtTokenUtil.getUsernameFromToken(actualToken);
+
+            // Cargar detalles del usuario
+            UserDetails userDetails = jwtUserDetailsService.loadUserByUsername(username);
+
+            // Validar el token
+            if (!jwtTokenUtil.validateToken(actualToken, userDetails)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Refresh token expirado o inválido");
+            }
+
+            // Generar nuevos tokens JWT
+            String newAccessToken = jwtTokenUtil.generateToken(userDetails);
+            String newRefreshToken = "refresh-" + jwtTokenUtil.generateToken(userDetails);
 
             // Definir tiempos de expiración para los nuevos tokens
-            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(1); // 1 hora
+            LocalDateTime accessTokenExpiry = LocalDateTime.now().plusHours(5); // Según JWT_TOKEN_VALIDITY
             LocalDateTime refreshTokenExpiry = LocalDateTime.now().plusDays(7); // 7 días
 
             // Crear objeto TokenInfo
@@ -195,7 +217,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Error al refrescar token: " + e.getMessage());
         }
     }
