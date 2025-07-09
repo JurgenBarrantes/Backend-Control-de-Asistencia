@@ -23,9 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.systems.dto.ClassroomDTO;
+import com.systems.dto.EnrolledStudentDTO;
+import com.systems.dto.PersonDTO;
 import com.systems.dto.ScheduleDTO;
 import com.systems.model.Classroom;
+import com.systems.model.Enrollment;
 import com.systems.model.Schedule;
+import com.systems.service.IEnrollmentService;
 import com.systems.service.IScheduleService;
 
 import lombok.RequiredArgsConstructor;
@@ -38,6 +42,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 // @CrossOrigin(origins = "*")
 public class ScheduleController { // es para manejar las solicitudes relacionadas con los horarios
 	private final IScheduleService service;
+	private final IEnrollmentService enrollmentService;
 
 	// @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
@@ -70,6 +75,47 @@ public class ScheduleController { // es para manejar las solicitudes relacionada
 			return ResponseEntity.ok(list);
 		}
 	}
+
+	@GetMapping("/{id}/students")
+    public ResponseEntity<List<EnrolledStudentDTO>> getEnrolledStudents(@PathVariable("id") Integer id) throws Exception {
+        // 1. Buscar el horario para obtener el aula
+        Schedule schedule = service.findById(id);
+        if (schedule.getClassroom() == null) {
+            // Si el horario no tiene un aula asociada, no puede tener estudiantes inscritos
+            return ResponseEntity.ok(List.of());
+        }
+        Integer classroomId = schedule.getClassroom().getIdClassroom();
+
+        // 2. Buscar todas las inscripciones para ese aula
+        List<Enrollment> enrollments = enrollmentService.findByClassroomId(classroomId);
+
+        // 3. Mapear los resultados al DTO deseado
+        List<EnrolledStudentDTO> enrolledStudents = enrollments.stream()
+                .map(enrollment -> {
+                    // Crear el PersonDTO a partir de la persona del estudiante
+                    PersonDTO personDto = new PersonDTO();
+                    personDto.setIdPerson(enrollment.getStudent().getPerson().getIdPerson());
+                    personDto.setDni(enrollment.getStudent().getPerson().getDni());
+                    personDto.setFirstName(enrollment.getStudent().getPerson().getFirstName());
+                    personDto.setLastName(enrollment.getStudent().getPerson().getLastName());
+                    personDto.setEmail(enrollment.getStudent().getPerson().getEmail());
+                    personDto.setPhone(enrollment.getStudent().getPerson().getPhone());
+                    if (enrollment.getStudent().getPerson().getBirthdate() != null) {
+                        personDto.setBirthdate(enrollment.getStudent().getPerson().getBirthdate().toString());
+                    }
+                    personDto.setGender(enrollment.getStudent().getPerson().getGender());
+                    personDto.setAddress(enrollment.getStudent().getPerson().getAddress());
+
+                    // Crear el DTO principal
+                    return new EnrolledStudentDTO(
+                            enrollment.getIdEnrollment(),
+                            enrollment.getStudent().getIdStudent(),
+                            personDto);
+                })
+                .toList();
+
+        return ResponseEntity.ok(enrolledStudents);
+    }
 
 	@GetMapping("/{id}")
 	public ResponseEntity<ScheduleDTO> findById(@PathVariable("id") Integer id) throws Exception {

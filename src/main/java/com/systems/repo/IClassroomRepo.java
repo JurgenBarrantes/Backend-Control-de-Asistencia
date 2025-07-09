@@ -17,4 +17,5 @@ public interface IClassroomRepo extends IGenericRepo<Classroom, Integer> {
 
     @Query("SELECT c FROM Classroom c WHERE c.teacher.idTeacher = :teacherId")
     List<Classroom> findByTeacherId(@Param("teacherId") Integer teacherId);
+
 }

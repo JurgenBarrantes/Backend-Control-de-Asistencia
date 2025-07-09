@@ -9,9 +9,12 @@ import com.systems.service.ITardinessRuleService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class TardinessRuleService extends GenericService<TardinessRule, Integer> implements ITardinessRuleService {
+
     private final ITardinessRuleRepo repo;
 
     @Override
@@ -19,4 +22,8 @@ public class TardinessRuleService extends GenericService<TardinessRule, Integer>
         return repo;
     }
 
+    @Override
+    public Optional<TardinessRule> findByClassroomId(Integer classroomId) {
+        return repo.findByClassroom_IdClassroom(classroomId);
+    }
 }

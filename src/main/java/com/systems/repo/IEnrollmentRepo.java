@@ -23,4 +23,6 @@ public interface IEnrollmentRepo extends IGenericRepo<Enrollment, Integer> {
     @Query("SELECT e FROM Enrollment e WHERE e.student.idStudent = :studentId")
     List<Enrollment> findByStudentId(@Param("studentId") Integer studentId);
 
+    List<Enrollment> findByClassroom_IdClassroom(Integer classroomId);
+
 }

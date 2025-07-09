@@ -11,4 +11,6 @@ public interface IEnrollmentService extends IGenericService<Enrollment, Integer>
     Page<Enrollment> findAllWithStudentAndClassroom(Pageable pageable);
 
     List<Enrollment> findByStudentId(Integer studentId);
+
+    List<Enrollment> findByClassroomId(Integer classroomId);
 }

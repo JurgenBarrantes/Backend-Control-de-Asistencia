@@ -27,7 +27,11 @@ import com.systems.dto.TokenInfo;
 import com.systems.dto.TokenResponse;
 import com.systems.model.Person;
 import com.systems.model.Role;
+import com.systems.model.Student;
+import com.systems.model.Teacher;
 import com.systems.model.User;
+import com.systems.repo.IStudentRepo;
+import com.systems.repo.ITeacherRepo;
 import com.systems.security.JwtTokenUtil;
 import com.systems.security.JwtUserDetailsService;
 import com.systems.service.IPersonService;
@@ -45,6 +49,8 @@ public class AuthController {
     private final IPersonService personService;
     private final IRoleService roleService;
     private final PasswordEncoder passwordEncoder;
+    private final IStudentRepo studentRepo;
+    private final ITeacherRepo teacherRepo;
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenUtil jwtTokenUtil;
@@ -147,6 +153,21 @@ public class AuthController {
             }
             person.setUser(savedUser); // Asignar el User ya persistido
             Person savedPerson = personService.save(person); // Guardar Person
+
+            // -----------------------------------------------------------------
+            // PASO ADICIONAL: Crear Student o Teacher según el rol
+            // -----------------------------------------------------------------
+            if ("STUDENT".equalsIgnoreCase(roleName)) {
+                Student student = new Student();
+                student.setPerson(savedPerson);
+                studentRepo.save(student);
+            } else if ("TEACHER".equalsIgnoreCase(roleName)) {
+                Teacher teacher = new Teacher();
+                teacher.setPerson(savedPerson);
+                teacherRepo.save(teacher);
+            }
+            // Si es ADMIN, no se crea entidad adicional.
+            // -----------------------------------------------------------------
 
             // Para la respuesta, necesitamos la relación en el objeto User
             savedUser.setPerson(savedPerson);

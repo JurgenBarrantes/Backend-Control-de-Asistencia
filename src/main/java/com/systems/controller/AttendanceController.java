@@ -19,18 +19,23 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.systems.dto.AttendanceDTO;
+import com.systems.dto.BulkAttendanceDTO;
 import com.systems.dto.ClassAttendanceDTO;
 import com.systems.dto.ClassAttendanceResponseDTO;
 import com.systems.dto.ClassroomDTO;
 import com.systems.dto.SimpleScheduleDTO;
 import com.systems.dto.StudentDTO;
+import com.systems.dto.StudentAttendanceDTO;
 import com.systems.dto.SubjectDTO;
 import com.systems.dto.TeacherDTO;
 import com.systems.model.Attendance;
 import com.systems.model.Classroom;
 import com.systems.model.Schedule;
 import com.systems.model.Student;
+import com.systems.model.TardinessRule;
 import com.systems.service.IAttendanceService;
+import com.systems.service.IScheduleService;
+import com.systems.service.ITardinessRuleService;
 
 import lombok.RequiredArgsConstructor;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
@@ -42,6 +47,8 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 // @CrossOrigin(origins = "*")
 public class AttendanceController { // es para manejar las solicitudes relacionadas con la asistencia
 	private final IAttendanceService service;
+	private final IScheduleService scheduleService;
+	private final ITardinessRuleService tardinessRuleService;
 
 	// @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('USER')")
 	@GetMapping
@@ -84,6 +91,12 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 				.path("/{id}")
 				.buildAndExpand(obj.getIdAttendance()).toUri();
 		return ResponseEntity.created(location).build();
+	}
+
+	@PostMapping("/bulk")
+	public ResponseEntity<Void> saveBulkAttendance(@RequestBody BulkAttendanceDTO bulkAttendanceDTO) throws Exception {
+		service.saveBulk(bulkAttendanceDTO);
+		return ResponseEntity.ok().build();
 	}
 
 	@PutMapping("/{id}")
@@ -166,9 +179,9 @@ public class AttendanceController { // es para manejar las solicitudes relaciona
 		}
 
 		if (dto.getEntryTime() != null && !dto.getEntryTime().trim().isEmpty()) {
-			attendance.setEntryTime(attendance.getDate());
+			attendance.setEntryTime(null);
 		} else {
-			attendance.setEntryTime(attendance.getDate());
+			attendance.setEntryTime(null);
 		}
 
 		attendance.setPresent(dto.isPresent());

@@ -33,4 +33,9 @@ public class EnrollmentService extends GenericService<Enrollment, Integer> imple
     public List<Enrollment> findByStudentId(Integer studentId) {
         return repo.findByStudentId(studentId);
     }
+
+    @Override
+    public List<Enrollment> findByClassroomId(Integer classroomId) {
+        return repo.findByClassroom_IdClassroom(classroomId);
+    }
 }

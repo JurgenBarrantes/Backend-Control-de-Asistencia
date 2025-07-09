@@ -1,6 +1,7 @@
 package com.systems.model;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Table(name = "attendances")
-public class Attendance { //para el control de asistencia de los estudiantes
+public class Attendance { // para el control de asistencia de los estudiantes
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
@@ -31,7 +32,7 @@ public class Attendance { //para el control de asistencia de los estudiantes
     private LocalDate date;
 
     @Column(nullable = false)
-    private LocalDate entryTime;
+    private LocalTime entryTime;
 
     @Column(nullable = false)
     private boolean isPresent;

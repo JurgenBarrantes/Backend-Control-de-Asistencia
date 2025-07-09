@@ -2,6 +2,8 @@ package com.systems.service;
 
 import com.systems.model.TardinessRule;
 
-public interface ITardinessRuleService extends IGenericService<TardinessRule, Integer> {
+import java.util.Optional;
 
+public interface ITardinessRuleService extends IGenericService<TardinessRule, Integer> {
+    Optional<TardinessRule> findByClassroomId(Integer classroomId);
 }

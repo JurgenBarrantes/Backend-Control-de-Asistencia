@@ -8,8 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentAttendanceDTO {
-    private Integer studentId;// ID del estudiante
-    private Boolean isPresent; // ¿Está presente?
-    private Boolean isLate; // ¿Llegó tarde?
-    private String observations; // Observaciones opcionales
+    private Integer studentId;
+    private Boolean isPresent;
+    private Boolean isLate;
 }

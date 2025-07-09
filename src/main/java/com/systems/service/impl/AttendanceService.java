@@ -5,23 +5,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.systems.dto.AttendanceDTO;
+import com.systems.dto.AttendanceReportDTO;
+import com.systems.dto.BulkAttendanceDTO;
 import com.systems.dto.ClassAttendanceDTO;
 import com.systems.dto.ClassAttendanceResponseDTO;
 import com.systems.dto.StudentAttendanceDTO;
 import com.systems.model.Attendance;
+import com.systems.model.Classroom;
+import com.systems.model.Schedule;
+import com.systems.model.Student;
+import com.systems.model.TardinessRule;
 import com.systems.repo.IAttendanceRepo;
 import com.systems.repo.IGenericRepo;
+import com.systems.repo.IScheduleRepo;
+import com.systems.repo.ITardinessRuleRepo;
 import com.systems.service.IAttendanceService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceService extends GenericService<Attendance, Integer> implements IAttendanceService {
     private final IAttendanceRepo repo;
+    private final IScheduleRepo scheduleRepo;
+    private final ITardinessRuleRepo tardinessRuleRepo;
     private final ModelMapper modelMapper;
 
     @Override
@@ -108,51 +122,72 @@ public class AttendanceService extends GenericService<Attendance, Integer> imple
     }
 
     private Attendance convertToEntity(AttendanceDTO dto) {
-        Attendance attendance = new Attendance();
-        attendance.setIdAttendance(dto.getIdAttendance());
-
-        // Convertir fecha string a LocalDate - siempre asegurar que tenga un valor
-        if (dto.getDate() != null && !dto.getDate().trim().isEmpty()) {
-            attendance.setDate(java.time.LocalDate.parse(dto.getDate()));
-        } else {
-            // Si no se proporciona fecha, usar la fecha actual
-            attendance.setDate(java.time.LocalDate.now());
-        }
-
-        // Convertir hora string a LocalDate (nota: en el modelo está como LocalDate,
-        // debería ser LocalTime) - siempre asegurar que tenga un valor
-        if (dto.getEntryTime() != null && !dto.getEntryTime().trim().isEmpty()) {
-            // Para mantener consistencia, usar la misma fecha que date
-            attendance.setEntryTime(attendance.getDate());
-        } else {
-            // Si no hay entryTime, usar la misma fecha que date
-            attendance.setEntryTime(attendance.getDate());
-        }
-
-        attendance.setPresent(dto.isPresent());
-        attendance.setLate(dto.isLate());
-
-        // Crear objetos Classroom y Schedule con solo el ID
-        if (dto.getClassroomId() != null) {
-            com.systems.model.Classroom classroom = new com.systems.model.Classroom();
-            classroom.setIdClassroom(dto.getClassroomId());
-            attendance.setClassroom(classroom);
-        }
-
-        if (dto.getScheduleId() != null) {
-            com.systems.model.Schedule schedule = new com.systems.model.Schedule();
-            schedule.setIdSchedule(dto.getScheduleId());
-            attendance.setSchedule(schedule);
-        }
-
-        // Crear objeto Student con solo el ID
-        if (dto.getStudentId() != null) {
-            com.systems.model.Student student = new com.systems.model.Student();
-            student.setIdStudent(dto.getStudentId());
-            attendance.setStudent(student);
-        }
-
+        Attendance attendance = modelMapper.map(dto, Attendance.class);
         return attendance;
     }
 
+    @Override
+    public List<ClassAttendanceResponseDTO> getAttendanceByClass(Integer classroomId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAttendanceByClass'");
+    }
+
+    public List<AttendanceReportDTO> getAttendanceReport(Integer classroomId, String startDate, String endDate) {
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        return repo.getAttendanceReport(classroomId, start, end);
+    }
+
+    @Transactional
+    @Override
+    public void saveBulk(BulkAttendanceDTO bulkAttendanceDTO) throws Exception {
+        LocalDate currentDate = LocalDate.now();
+        LocalTime entryTime = LocalTime.now();
+
+        Schedule schedule = scheduleRepo.findById(bulkAttendanceDTO.getScheduleId())
+                .orElseThrow(() -> new Exception("Schedule not found"));
+        LocalTime scheduleStartTime = schedule.getStartTime();
+
+        Optional<TardinessRule> ruleOpt = tardinessRuleRepo
+                .findByClassroom_IdClassroom(bulkAttendanceDTO.getClassroomId());
+        int tardinessThreshold = ruleOpt.map(TardinessRule::getTardinnessThresholdMinutes).orElse(10); // Default 10
+                                                                                                       // mins
+        int absenceThreshold = ruleOpt.map(TardinessRule::getAbsenceThresholdMinutes).orElse(30); // Default 30 mins
+
+        List<Attendance> attendancesToSave = new ArrayList<>();
+
+        for (StudentAttendanceDTO studentAttendance : bulkAttendanceDTO.getStudents()) {
+            Attendance attendance = new Attendance();
+            attendance.setDate(currentDate);
+            attendance.setEntryTime(entryTime);
+
+            Classroom classroom = new Classroom();
+            classroom.setIdClassroom(bulkAttendanceDTO.getClassroomId());
+            attendance.setClassroom(classroom);
+
+            attendance.setSchedule(schedule);
+
+            Student student = new Student();
+            student.setIdStudent(studentAttendance.getStudentId());
+            attendance.setStudent(student);
+
+            long minutesLate = ChronoUnit.MINUTES.between(scheduleStartTime, entryTime);
+
+            if (!studentAttendance.getIsPresent()) {
+                attendance.setPresent(false);
+                attendance.setLate(false);
+            } else if (minutesLate > absenceThreshold) {
+                attendance.setPresent(false); // Considered absent
+                attendance.setLate(false);
+            } else if (minutesLate > tardinessThreshold) {
+                attendance.setPresent(true);
+                attendance.setLate(true); // Tardy
+            } else {
+                attendance.setPresent(true);
+                attendance.setLate(false); // On time
+            }
+            attendancesToSave.add(attendance);
+        }
+        repo.saveAll(attendancesToSave);
+    }
 }
